@@ -1,11 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:focuspilot/app/app_shell.dart';
+import 'package:focuspilot/app/app.dart';
+
+import '../features/tasks/presentation/controllers/tasks_cubit_test.dart';
 
 void main() {
   group('AppShell navigation', () {
+    late FakeTaskRepository taskRepository;
+
+    setUp(() {
+      taskRepository = FakeTaskRepository();
+    });
+
+    tearDown(() {
+      taskRepository.dispose();
+    });
+
     Future<void> pumpAppShell(WidgetTester tester) async {
-      await tester.pumpWidget(const MaterialApp(home: AppShell()));
+      await tester.pumpWidget(FocusPilotApp(taskRepository: taskRepository));
+      await tester.pumpAndSettle();
     }
 
     testWidgets('displays Today screen initially', (tester) async {
@@ -23,7 +36,7 @@ void main() {
       await tester.tap(find.text('Tasks'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Manage your tasks here'), findsOneWidget);
+      expect(find.text('No tasks yet'), findsOneWidget);
       expect(find.text('Welcome to your Today screen'), findsNothing);
     });
 
