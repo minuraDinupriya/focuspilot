@@ -21,12 +21,33 @@ class TaskEntries extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [TaskEntries])
+class FocusSessionEntries extends Table {
+  TextColumn get id => text()();
+  TextColumn get mode => text()();
+  IntColumn get durationSeconds => integer()();
+  DateTimeColumn get completedAt => dateTime()();
+  TextColumn get taskId => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DriftDatabase(tables: [TaskEntries, FocusSessionEntries])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (m) => m.createAll(),
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.createTable(focusSessionEntries);
+      }
+    },
+  );
 
   static LazyDatabase _openConnection() {
     return LazyDatabase(() async {
