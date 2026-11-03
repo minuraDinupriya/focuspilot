@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:focuspilot/features/tasks/domain/models/task.dart';
 import 'package:focuspilot/features/today/domain/models/daily_focus_metric.dart';
 
 enum TodayStatus { initial, loading, loaded, error }
@@ -12,6 +13,7 @@ class TodayState extends Equatable {
     this.completedTasksToday = 0,
     this.weeklyMetrics = const [],
     this.currentStreakDays = 0,
+    this.priorityTasks = const [],
     this.errorMessage,
   });
 
@@ -22,6 +24,7 @@ class TodayState extends Equatable {
   final int completedTasksToday;
   final List<DailyFocusMetric> weeklyMetrics;
   final int currentStreakDays;
+  final List<Task> priorityTasks;
   final String? errorMessage;
 
   double get goalProgress {
@@ -46,6 +49,7 @@ class TodayState extends Equatable {
     int? completedTasksToday,
     List<DailyFocusMetric>? weeklyMetrics,
     int? currentStreakDays,
+    List<Task>? priorityTasks,
     String? errorMessage,
   }) {
     return TodayState(
@@ -57,6 +61,7 @@ class TodayState extends Equatable {
       completedTasksToday: completedTasksToday ?? this.completedTasksToday,
       weeklyMetrics: weeklyMetrics ?? this.weeklyMetrics,
       currentStreakDays: currentStreakDays ?? this.currentStreakDays,
+      priorityTasks: priorityTasks ?? this.priorityTasks,
       errorMessage: errorMessage,
     );
   }
@@ -70,6 +75,7 @@ class TodayState extends Equatable {
     completedTasksToday,
     weeklyMetrics,
     currentStreakDays,
+    priorityTasks,
     errorMessage,
   ];
 }

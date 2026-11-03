@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:focuspilot/features/tasks/domain/models/task.dart';
 import 'package:focuspilot/features/today/presentation/controllers/today_cubit.dart';
 import 'package:focuspilot/features/today/presentation/controllers/today_state.dart';
 import 'package:focuspilot/features/today/presentation/widgets/daily_goal_ring.dart';
 import 'package:focuspilot/features/today/presentation/widgets/metric_cards_row.dart';
+import 'package:focuspilot/features/today/presentation/widgets/priority_tasks_preview.dart';
 import 'package:focuspilot/features/today/presentation/widgets/quick_start_focus_card.dart';
 import 'package:focuspilot/features/today/presentation/widgets/weekly_analytics_chart.dart';
 
 class TodayScreen extends StatelessWidget {
-  const TodayScreen({super.key, this.onNavigateToFocus});
+  const TodayScreen({super.key, this.onNavigateToFocus, this.onFocusTask});
 
   final VoidCallback? onNavigateToFocus;
+  final ValueChanged<Task>? onFocusTask;
 
   @override
   Widget build(BuildContext context) {
@@ -89,6 +92,23 @@ class TodayScreen extends StatelessWidget {
                   completedTasks: state.completedTasksToday,
                 ),
                 const SizedBox(height: 24),
+
+                // Priority Focus Tasks (FOC-14)
+                if (state.priorityTasks.isNotEmpty) ...[
+                  PriorityTasksPreview(
+                    tasks: state.priorityTasks,
+                    onToggleTask: (id) =>
+                        context.read<TodayCubit>().toggleTask(id),
+                    onFocusTask: (task) {
+                      if (onFocusTask != null) {
+                        onFocusTask!(task);
+                      } else if (onNavigateToFocus != null) {
+                        onNavigateToFocus!();
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                ],
 
                 // 7-Day Weekly Analytics Chart (FOC-13)
                 if (state.weeklyMetrics.isNotEmpty) ...[

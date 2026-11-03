@@ -172,4 +172,3 @@ class WeeklyAnalyticsChart extends StatelessWidget {
     );
   }
 }
-

@@ -16,4 +16,3 @@ class DailyFocusMetric extends Equatable {
   @override
   List<Object?> get props => [date, dayLabel, focusMinutes, isToday];
 }
-

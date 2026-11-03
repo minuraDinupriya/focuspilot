@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:focuspilot/features/focus/domain/models/focus_mode.dart';
 import 'package:focuspilot/features/focus/domain/models/focus_session.dart';
 import 'package:focuspilot/features/focus/domain/repositories/focus_session_repository.dart';
+import 'package:focuspilot/features/tasks/domain/models/task_priority.dart';
 import 'package:focuspilot/features/tasks/domain/repositories/task_repository.dart';
 import 'package:focuspilot/features/today/domain/models/daily_focus_metric.dart';
 import 'package:focuspilot/features/today/presentation/controllers/today_state.dart';
@@ -100,6 +101,15 @@ class TodayCubit extends Cubit<TodayState> {
 
       final completedTasksCount = tasks.where((t) => t.isCompleted).length;
 
+      // Extract pending priority tasks (High priority first, max 3)
+      final pendingTasks = tasks.where((t) => !t.isCompleted).toList();
+      pendingTasks.sort((a, b) {
+        final aWeight = _priorityWeight(a.priority);
+        final bWeight = _priorityWeight(b.priority);
+        return bWeight.compareTo(aWeight); // highest weight first
+      });
+      final priorityTasks = pendingTasks.take(3).toList();
+
       // Compute last 7 days metrics
       final weeklyMetrics = _calculateWeeklyMetrics(sessions, now);
 
@@ -114,8 +124,32 @@ class TodayCubit extends Cubit<TodayState> {
           completedTasksToday: completedTasksCount,
           weeklyMetrics: weeklyMetrics,
           currentStreakDays: streak,
+          priorityTasks: priorityTasks,
         ),
       );
+    } catch (e) {
+      if (!isClosed) {
+        emit(
+          state.copyWith(status: TodayStatus.error, errorMessage: e.toString()),
+        );
+      }
+    }
+  }
+
+  int _priorityWeight(TaskPriority priority) {
+    switch (priority) {
+      case TaskPriority.high:
+        return 3;
+      case TaskPriority.medium:
+        return 2;
+      case TaskPriority.low:
+        return 1;
+    }
+  }
+
+  Future<void> toggleTask(String id) async {
+    try {
+      await _taskRepository.toggleTaskCompletion(id);
     } catch (e) {
       if (!isClosed) {
         emit(
@@ -162,7 +196,6 @@ class TodayCubit extends Cubit<TodayState> {
       );
       final minutes = (totalSecs / 60).round();
 
-      // targetDate.weekday: 1 is Mon, 7 is Sun
       final label = _dayLabels[targetDate.weekday - 1];
 
       metrics.add(
@@ -182,7 +215,6 @@ class TodayCubit extends Cubit<TodayState> {
     final workSessions = sessions.where((s) => s.mode == FocusMode.work);
     if (workSessions.isEmpty) return 0;
 
-    // Collect dates that have at least 1 completed work session
     final activeDates = <DateTime>{};
     for (final session in workSessions) {
       final date = DateTime(
@@ -196,14 +228,13 @@ class TodayCubit extends Cubit<TodayState> {
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
 
-    // A streak can continue if the user either focused today OR focused yesterday
     DateTime checkDate;
     if (activeDates.contains(today)) {
       checkDate = today;
     } else if (activeDates.contains(yesterday)) {
       checkDate = yesterday;
     } else {
-      return 0; // Streak broken
+      return 0;
     }
 
     int streak = 0;

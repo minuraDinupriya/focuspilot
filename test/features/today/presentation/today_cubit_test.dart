@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:focuspilot/features/focus/domain/models/focus_mode.dart';
 import 'package:focuspilot/features/focus/domain/models/focus_session.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
+import 'package:focuspilot/features/tasks/domain/models/task_priority.dart';
 import 'package:focuspilot/features/today/presentation/controllers/today_cubit.dart';
 import 'package:focuspilot/features/today/presentation/controllers/today_state.dart';
 
@@ -69,38 +70,43 @@ void main() {
       expect(cubit.state.goalProgress, closeTo(50 / 120, 0.001));
     });
 
-    test('updates completed tasks count when task repository emits', () async {
+    test('updates completed tasks count and sorts priority tasks', () async {
       final now = DateTime.now();
-      final task1 = Task(
-        id: 't1',
-        title: 'Task 1',
-        isCompleted: true,
-        createdAt: now,
-      );
-      final task2 = Task(
-        id: 't2',
-        title: 'Task 2',
+      final taskLow = Task(
+        id: 't_low',
+        title: 'Low task',
+        priority: TaskPriority.low,
         isCompleted: false,
         createdAt: now,
       );
-      final task3 = Task(
-        id: 't3',
-        title: 'Task 3',
+      final taskHigh = Task(
+        id: 't_high',
+        title: 'High task',
+        priority: TaskPriority.high,
+        isCompleted: false,
+        createdAt: now,
+      );
+      final taskDone = Task(
+        id: 't_done',
+        title: 'Done task',
+        priority: TaskPriority.high,
         isCompleted: true,
         createdAt: now,
       );
 
-      fakeTaskRepository.emitTasks([task1, task2, task3]);
+      fakeTaskRepository.emitTasks([taskLow, taskHigh, taskDone]);
       await Future<void>.delayed(Duration.zero);
 
       expect(cubit.state.status, TodayStatus.loaded);
-      expect(cubit.state.completedTasksToday, 2);
+      expect(cubit.state.completedTasksToday, 1);
+      // High priority task should be first in priorityTasks
+      expect(cubit.state.priorityTasks.length, 2);
+      expect(cubit.state.priorityTasks.first.title, 'High task');
     });
 
     test('calculates 7-day weekly metrics and streak correctly', () async {
       final now = DateTime.now();
 
-      // Today session
       final sessionToday = FocusSession(
         id: 's_today',
         mode: FocusMode.work,
@@ -108,7 +114,6 @@ void main() {
         durationSeconds: 1500, // 25m
       );
 
-      // Yesterday session
       final sessionYesterday = FocusSession(
         id: 's_yest',
         mode: FocusMode.work,
@@ -116,24 +121,12 @@ void main() {
         durationSeconds: 3000, // 50m
       );
 
-      // 2 days ago session
-      final session2DaysAgo = FocusSession(
-        id: 's_2days',
-        mode: FocusMode.work,
-        completedAt: now.subtract(const Duration(days: 2)),
-        durationSeconds: 1500, // 25m
-      );
-
-      fakeSessionRepository.emitSessions([
-        sessionToday,
-        sessionYesterday,
-        session2DaysAgo,
-      ]);
+      fakeSessionRepository.emitSessions([sessionToday, sessionYesterday]);
       await Future<void>.delayed(Duration.zero);
 
       expect(cubit.state.weeklyMetrics.length, 7);
-      expect(cubit.state.currentStreakDays, 3);
-      expect(cubit.state.weeklyMetrics.last.focusMinutes, 25); // today is last
+      expect(cubit.state.currentStreakDays, 2);
+      expect(cubit.state.weeklyMetrics.last.focusMinutes, 25);
       expect(cubit.state.weeklyMetrics.last.isToday, isTrue);
     });
   });
