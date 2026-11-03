@@ -13,23 +13,29 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
 
-  static const List<Widget> _screens = [
-    TodayScreen(),
-    TasksScreen(),
-    FocusScreen(),
-  ];
-
   void _onDestinationSelected(int index) {
     setState(() {
       _selectedIndex = index;
     });
   }
 
+  void _navigateToFocus() {
+    setState(() {
+      _selectedIndex = 2; // Index of Focus tab
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final screens = [
+      TodayScreen(onNavigateToFocus: _navigateToFocus),
+      const TasksScreen(),
+      const FocusScreen(),
+    ];
+
     return Scaffold(
       appBar: AppBar(title: const Text('FocusPilot')),
-      body: _screens[_selectedIndex],
+      body: screens[_selectedIndex],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _onDestinationSelected,

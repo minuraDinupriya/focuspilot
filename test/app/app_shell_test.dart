@@ -33,7 +33,7 @@ void main() {
     testWidgets('displays Today screen initially', (tester) async {
       await pumpAppShell(tester);
 
-      expect(find.text('Welcome to your Today screen'), findsOneWidget);
+      expect(find.text('Good day!'), findsOneWidget);
 
       expect(find.byType(NavigationBar), findsOneWidget);
       expect(find.byType(NavigationDestination), findsNWidgets(3));
@@ -42,34 +42,54 @@ void main() {
     testWidgets('navigates to Tasks screen', (tester) async {
       await pumpAppShell(tester);
 
-      await tester.tap(find.text('Tasks'));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.byIcon(Icons.task_alt_outlined),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('No tasks yet'), findsOneWidget);
-      expect(find.text('Welcome to your Today screen'), findsNothing);
+      expect(find.text('Good day!'), findsNothing);
     });
 
     testWidgets('navigates to Focus screen', (tester) async {
       await pumpAppShell(tester);
 
-      await tester.tap(find.text('Focus'));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.byIcon(Icons.timer_outlined),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Start Focus'), findsOneWidget);
       expect(find.text('25:00'), findsOneWidget);
-      expect(find.text('Welcome to your Today screen'), findsNothing);
+      expect(find.text('Good day!'), findsNothing);
     });
 
     testWidgets('can return to Today screen', (tester) async {
       await pumpAppShell(tester);
 
-      await tester.tap(find.text('Tasks'));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.byIcon(Icons.task_alt_outlined),
+        ),
+      );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Today'));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.byIcon(Icons.today_outlined),
+        ),
+      );
       await tester.pumpAndSettle();
 
-      expect(find.text('Welcome to your Today screen'), findsOneWidget);
+      expect(find.text('Good day!'), findsOneWidget);
     });
 
     testWidgets('updates the selected navigation destination', (tester) async {
@@ -81,7 +101,12 @@ void main() {
 
       expect(navigationBar.selectedIndex, 0);
 
-      await tester.tap(find.text('Focus'));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.byIcon(Icons.timer_outlined),
+        ),
+      );
       await tester.pumpAndSettle();
 
       navigationBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
