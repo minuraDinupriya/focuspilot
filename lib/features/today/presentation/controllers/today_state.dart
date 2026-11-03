@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:focuspilot/features/today/domain/models/daily_focus_metric.dart';
 
 enum TodayStatus { initial, loading, loaded, error }
 
@@ -9,6 +10,8 @@ class TodayState extends Equatable {
     this.dailyGoalMinutes = 120,
     this.completedSessionsToday = 0,
     this.completedTasksToday = 0,
+    this.weeklyMetrics = const [],
+    this.currentStreakDays = 0,
     this.errorMessage,
   });
 
@@ -17,6 +20,8 @@ class TodayState extends Equatable {
   final int dailyGoalMinutes;
   final int completedSessionsToday;
   final int completedTasksToday;
+  final List<DailyFocusMetric> weeklyMetrics;
+  final int currentStreakDays;
   final String? errorMessage;
 
   double get goalProgress {
@@ -25,12 +30,22 @@ class TodayState extends Equatable {
     return progress.clamp(0.0, 1.0);
   }
 
+  int get maxWeeklyMinutes {
+    if (weeklyMetrics.isEmpty) return 60;
+    final highest = weeklyMetrics
+        .map((m) => m.focusMinutes)
+        .fold<int>(0, (max, val) => val > max ? val : max);
+    return highest > 60 ? highest : 60;
+  }
+
   TodayState copyWith({
     TodayStatus? status,
     int? focusMinutesToday,
     int? dailyGoalMinutes,
     int? completedSessionsToday,
     int? completedTasksToday,
+    List<DailyFocusMetric>? weeklyMetrics,
+    int? currentStreakDays,
     String? errorMessage,
   }) {
     return TodayState(
@@ -40,6 +55,8 @@ class TodayState extends Equatable {
       completedSessionsToday:
           completedSessionsToday ?? this.completedSessionsToday,
       completedTasksToday: completedTasksToday ?? this.completedTasksToday,
+      weeklyMetrics: weeklyMetrics ?? this.weeklyMetrics,
+      currentStreakDays: currentStreakDays ?? this.currentStreakDays,
       errorMessage: errorMessage,
     );
   }
@@ -51,6 +68,8 @@ class TodayState extends Equatable {
     dailyGoalMinutes,
     completedSessionsToday,
     completedTasksToday,
+    weeklyMetrics,
+    currentStreakDays,
     errorMessage,
   ];
 }

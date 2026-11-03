@@ -5,6 +5,7 @@ import 'package:focuspilot/features/today/presentation/controllers/today_state.d
 import 'package:focuspilot/features/today/presentation/widgets/daily_goal_ring.dart';
 import 'package:focuspilot/features/today/presentation/widgets/metric_cards_row.dart';
 import 'package:focuspilot/features/today/presentation/widgets/quick_start_focus_card.dart';
+import 'package:focuspilot/features/today/presentation/widgets/weekly_analytics_chart.dart';
 
 class TodayScreen extends StatelessWidget {
   const TodayScreen({super.key, this.onNavigateToFocus});
@@ -89,13 +90,22 @@ class TodayScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
+                // 7-Day Weekly Analytics Chart (FOC-13)
+                if (state.weeklyMetrics.isNotEmpty) ...[
+                  WeeklyAnalyticsChart(
+                    metrics: state.weeklyMetrics,
+                    maxMinutes: state.maxWeeklyMinutes,
+                    streakDays: state.currentStreakDays,
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
                 // Quick Start Focus CTA Card
                 QuickStartFocusCard(
                   onStartPressed: () {
                     if (onNavigateToFocus != null) {
                       onNavigateToFocus!();
                     } else {
-                      // Feedback snackbar when pressed directly
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Switch to Focus tab to start!'),
