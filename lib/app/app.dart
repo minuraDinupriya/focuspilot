@@ -9,6 +9,7 @@ import 'package:focuspilot/features/tasks/data/datasources/database/app_database
 import 'package:focuspilot/features/tasks/data/repositories/task_repository_impl.dart';
 import 'package:focuspilot/features/tasks/domain/repositories/task_repository.dart';
 import 'package:focuspilot/features/tasks/presentation/controllers/tasks_cubit.dart';
+import 'package:focuspilot/features/today/presentation/controllers/today_cubit.dart';
 
 class FocusPilotApp extends StatefulWidget {
   const FocusPilotApp({
@@ -65,6 +66,12 @@ class _FocusPilotAppState extends State<FocusPilotApp> {
       ],
       child: MultiBlocProvider(
         providers: [
+          BlocProvider<TodayCubit>(
+            create: (context) => TodayCubit(
+              sessionRepository: _focusSessionRepository,
+              taskRepository: _taskRepository,
+            ),
+          ),
           BlocProvider<TasksCubit>(
             create: (context) => TasksCubit(_taskRepository),
           ),
