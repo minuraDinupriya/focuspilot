@@ -9,6 +9,7 @@ import 'package:focuspilot/features/today/presentation/today_screen.dart';
 import 'package:focuspilot/features/today/presentation/widgets/daily_goal_ring.dart';
 import 'package:focuspilot/features/today/presentation/widgets/metric_cards_row.dart';
 import 'package:focuspilot/features/today/presentation/widgets/quick_start_focus_card.dart';
+import 'package:focuspilot/features/today/presentation/widgets/weekly_analytics_chart.dart';
 
 import '../../tasks/fakes/fake_task_repository.dart';
 import '../fakes/fake_focus_session_repository.dart';
@@ -42,24 +43,28 @@ void main() {
       );
     }
 
-    testWidgets('renders daily goal ring, metric cards, and quick start card', (
-      tester,
-    ) async {
-      final cubit = TodayCubit(
-        sessionRepository: fakeSessionRepository,
-        taskRepository: fakeTaskRepository,
-      );
+    testWidgets(
+      'renders daily goal ring, metric cards, weekly chart, and quick start card',
+      (tester) async {
+        final cubit = TodayCubit(
+          sessionRepository: fakeSessionRepository,
+          taskRepository: fakeTaskRepository,
+        );
 
-      await tester.pumpWidget(createSubject(cubit: cubit));
-      await tester.pump();
+        await cubit.refresh();
 
-      expect(find.byType(DailyGoalRing), findsOneWidget);
-      expect(find.byType(MetricCardsRow), findsOneWidget);
-      expect(find.byType(QuickStartFocusCard), findsOneWidget);
-      expect(find.text('Good day!'), findsOneWidget);
+        await tester.pumpWidget(createSubject(cubit: cubit));
+        await tester.pump();
 
-      cubit.close();
-    });
+        expect(find.byType(DailyGoalRing), findsOneWidget);
+        expect(find.byType(MetricCardsRow), findsOneWidget);
+        expect(find.byType(WeeklyAnalyticsChart), findsOneWidget);
+        expect(find.byType(QuickStartFocusCard), findsOneWidget);
+        expect(find.text('Good day!'), findsOneWidget);
+
+        cubit.close();
+      },
+    );
 
     testWidgets('displays updated metrics when repository emits data', (
       tester,
@@ -82,14 +87,13 @@ void main() {
         taskRepository: fakeTaskRepository,
       );
 
-      // Trigger recalculate and build
       await cubit.refresh();
 
       await tester.pumpWidget(createSubject(cubit: cubit));
       await tester.pump();
 
       expect(find.text('25 / 120'), findsOneWidget);
-      expect(find.text('25m'), findsOneWidget);
+      expect(find.text('25m'), findsWidgets); // Ring + Metric card + Bar chart
       expect(find.text('1'), findsNWidgets(2)); // 1 session, 1 task
 
       cubit.close();
@@ -106,6 +110,14 @@ void main() {
       var navigated = false;
       await tester.pumpWidget(
         createSubject(cubit: cubit, onNavigateToFocus: () => navigated = true),
+      );
+      await tester.pump();
+
+      // Scroll down so the quick start card is in view inside SingleChildScrollView
+      await tester.scrollUntilVisible(
+        find.text('Start'),
+        200,
+        scrollable: find.byType(Scrollable),
       );
       await tester.pump();
 

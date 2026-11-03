@@ -96,5 +96,45 @@ void main() {
       expect(cubit.state.status, TodayStatus.loaded);
       expect(cubit.state.completedTasksToday, 2);
     });
+
+    test('calculates 7-day weekly metrics and streak correctly', () async {
+      final now = DateTime.now();
+
+      // Today session
+      final sessionToday = FocusSession(
+        id: 's_today',
+        mode: FocusMode.work,
+        completedAt: now,
+        durationSeconds: 1500, // 25m
+      );
+
+      // Yesterday session
+      final sessionYesterday = FocusSession(
+        id: 's_yest',
+        mode: FocusMode.work,
+        completedAt: now.subtract(const Duration(days: 1)),
+        durationSeconds: 3000, // 50m
+      );
+
+      // 2 days ago session
+      final session2DaysAgo = FocusSession(
+        id: 's_2days',
+        mode: FocusMode.work,
+        completedAt: now.subtract(const Duration(days: 2)),
+        durationSeconds: 1500, // 25m
+      );
+
+      fakeSessionRepository.emitSessions([
+        sessionToday,
+        sessionYesterday,
+        session2DaysAgo,
+      ]);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(cubit.state.weeklyMetrics.length, 7);
+      expect(cubit.state.currentStreakDays, 3);
+      expect(cubit.state.weeklyMetrics.last.focusMinutes, 25); // today is last
+      expect(cubit.state.weeklyMetrics.last.isToday, isTrue);
+    });
   });
 }
