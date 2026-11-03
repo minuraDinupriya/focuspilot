@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:focuspilot/features/focus/presentation/controllers/focus_bloc.dart';
+import 'package:focuspilot/features/focus/presentation/controllers/focus_event.dart';
 import 'package:focuspilot/features/focus/presentation/focus_screen.dart';
+import 'package:focuspilot/features/tasks/domain/models/task.dart';
 import 'package:focuspilot/features/tasks/presentation/tasks_screen.dart';
 import 'package:focuspilot/features/today/presentation/today_screen.dart';
 
@@ -25,10 +29,21 @@ class _AppShellState extends State<AppShell> {
     });
   }
 
+  void _onFocusTask(Task task) {
+    // 1. Link the task directly into the FocusBloc
+    context.read<FocusBloc>().add(FocusTaskLinked(task: task));
+
+    // 2. Switch tab to Focus
+    _navigateToFocus();
+  }
+
   @override
   Widget build(BuildContext context) {
     final screens = [
-      TodayScreen(onNavigateToFocus: _navigateToFocus),
+      TodayScreen(
+        onNavigateToFocus: _navigateToFocus,
+        onFocusTask: _onFocusTask,
+      ),
       const TasksScreen(),
       const FocusScreen(),
     ];

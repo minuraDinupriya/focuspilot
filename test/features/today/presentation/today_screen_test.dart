@@ -4,10 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:focuspilot/features/focus/domain/models/focus_mode.dart';
 import 'package:focuspilot/features/focus/domain/models/focus_session.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
+import 'package:focuspilot/features/tasks/domain/models/task_priority.dart';
 import 'package:focuspilot/features/today/presentation/controllers/today_cubit.dart';
 import 'package:focuspilot/features/today/presentation/today_screen.dart';
 import 'package:focuspilot/features/today/presentation/widgets/daily_goal_ring.dart';
 import 'package:focuspilot/features/today/presentation/widgets/metric_cards_row.dart';
+import 'package:focuspilot/features/today/presentation/widgets/priority_tasks_preview.dart';
 import 'package:focuspilot/features/today/presentation/widgets/quick_start_focus_card.dart';
 import 'package:focuspilot/features/today/presentation/widgets/weekly_analytics_chart.dart';
 
@@ -32,12 +34,16 @@ void main() {
     Widget createSubject({
       required TodayCubit cubit,
       VoidCallback? onNavigateToFocus,
+      ValueChanged<Task>? onFocusTask,
     }) {
       return MaterialApp(
         home: Scaffold(
           body: BlocProvider<TodayCubit>.value(
             value: cubit,
-            child: TodayScreen(onNavigateToFocus: onNavigateToFocus),
+            child: TodayScreen(
+              onNavigateToFocus: onNavigateToFocus,
+              onFocusTask: onFocusTask,
+            ),
           ),
         ),
       );
@@ -65,6 +71,48 @@ void main() {
         cubit.close();
       },
     );
+
+    testWidgets('renders priority tasks and triggers onFocusTask', (
+      tester,
+    ) async {
+      final now = DateTime.now();
+      await fakeTaskRepository.saveTask(
+        Task(
+          id: 't_p1',
+          title: 'Finish Sprint 4',
+          priority: TaskPriority.high,
+          createdAt: now,
+        ),
+      );
+
+      final cubit = TodayCubit(
+        sessionRepository: fakeSessionRepository,
+        taskRepository: fakeTaskRepository,
+      );
+
+      await cubit.refresh();
+
+      Task? selectedTask;
+      await tester.pumpWidget(
+        createSubject(cubit: cubit, onFocusTask: (task) => selectedTask = task),
+      );
+      await tester.pump();
+
+      expect(find.byType(PriorityTasksPreview), findsOneWidget);
+      expect(find.text('Finish Sprint 4'), findsOneWidget);
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(PriorityTasksPreview),
+          matching: find.text('Focus'),
+        ),
+      );
+      await tester.pump();
+
+      expect(selectedTask?.title, 'Finish Sprint 4');
+
+      cubit.close();
+    });
 
     testWidgets('displays updated metrics when repository emits data', (
       tester,
@@ -113,7 +161,6 @@ void main() {
       );
       await tester.pump();
 
-      // Scroll down so the quick start card is in view inside SingleChildScrollView
       await tester.scrollUntilVisible(
         find.text('Start'),
         200,
