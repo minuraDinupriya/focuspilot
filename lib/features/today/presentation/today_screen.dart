@@ -7,10 +7,7 @@ import 'package:focuspilot/features/today/presentation/widgets/metric_cards_row.
 import 'package:focuspilot/features/today/presentation/widgets/quick_start_focus_card.dart';
 
 class TodayScreen extends StatelessWidget {
-  const TodayScreen({
-    super.key,
-    this.onNavigateToFocus,
-  });
+  const TodayScreen({super.key, this.onNavigateToFocus});
 
   final VoidCallback? onNavigateToFocus;
 
@@ -33,9 +30,16 @@ class TodayScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
+                Icon(
+                  Icons.error_outline,
+                  size: 48,
+                  color: theme.colorScheme.error,
+                ),
                 const SizedBox(height: 12),
-                Text('Could not load dashboard', style: theme.textTheme.titleMedium),
+                Text(
+                  'Could not load dashboard',
+                  style: theme.textTheme.titleMedium,
+                ),
                 const SizedBox(height: 8),
                 FilledButton.tonal(
                   onPressed: () => context.read<TodayCubit>().refresh(),

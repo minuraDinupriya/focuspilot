@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:focuspilot/features/focus/domain/models/focus_mode.dart';
 import 'package:focuspilot/features/focus/domain/models/focus_session.dart';
 import 'package:focuspilot/features/focus/domain/repositories/focus_session_repository.dart';
@@ -24,7 +25,8 @@ class FakeFocusSessionRepository implements FocusSessionRepository {
   }
 
   @override
-  Future<List<FocusSession>> getSessions() async => List.unmodifiable(_sessions);
+  Future<List<FocusSession>> getSessions() async =>
+      List.unmodifiable(_sessions);
 
   @override
   Future<void> saveSession(FocusSession session) async {
@@ -46,8 +48,7 @@ class FakeFocusSessionRepository implements FocusSessionRepository {
     final totalSeconds = _sessions
         .where(
           (s) =>
-              s.completedAt.isAfter(startOfToday) &&
-              s.mode == FocusMode.work,
+              s.completedAt.isAfter(startOfToday) && s.mode == FocusMode.work,
         )
         .fold<int>(0, (sum, s) => sum + s.durationSeconds);
     return (totalSeconds / 60).round();

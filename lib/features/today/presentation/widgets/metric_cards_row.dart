@@ -102,4 +102,3 @@ class _MetricCard extends StatelessWidget {
     );
   }
 }
-

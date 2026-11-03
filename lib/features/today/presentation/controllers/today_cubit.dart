@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:focuspilot/features/focus/domain/models/focus_mode.dart';
 import 'package:focuspilot/features/focus/domain/repositories/focus_session_repository.dart';
@@ -9,15 +10,10 @@ class TodayCubit extends Cubit<TodayState> {
   TodayCubit({
     required FocusSessionRepository sessionRepository,
     required TaskRepository taskRepository,
-  }) : this._(
-         sessionRepository,
-         taskRepository,
-       );
+  }) : this._(sessionRepository, taskRepository);
 
-  TodayCubit._(
-    this._sessionRepository,
-    this._taskRepository,
-  ) : super(const TodayState()) {
+  TodayCubit._(this._sessionRepository, this._taskRepository)
+    : super(const TodayState()) {
     _initSubscriptions();
   }
 
@@ -71,7 +67,15 @@ class TodayCubit extends Cubit<TodayState> {
     try {
       final now = DateTime.now();
       final startOfToday = DateTime(now.year, now.month, now.day);
-      final endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
+      final endOfToday = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        23,
+        59,
+        59,
+        999,
+      );
 
       final sessions = await _sessionRepository.getSessions();
       if (isClosed) return;
@@ -107,10 +111,7 @@ class TodayCubit extends Cubit<TodayState> {
     } catch (e) {
       if (!isClosed) {
         emit(
-          state.copyWith(
-            status: TodayStatus.error,
-            errorMessage: e.toString(),
-          ),
+          state.copyWith(status: TodayStatus.error, errorMessage: e.toString()),
         );
       }
     }

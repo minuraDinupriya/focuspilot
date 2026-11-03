@@ -54,4 +54,3 @@ class TodayState extends Equatable {
     errorMessage,
   ];
 }
-

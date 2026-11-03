@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 class DailyGoalRing extends StatelessWidget {
@@ -59,7 +60,10 @@ class DailyGoalRing extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.primaryContainer,
                     borderRadius: BorderRadius.circular(12),
@@ -133,4 +137,3 @@ class _RingPainter extends CustomPainter {
         oldDelegate.strokeWidth != strokeWidth;
   }
 }
-

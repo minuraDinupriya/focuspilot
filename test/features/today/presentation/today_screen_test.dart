@@ -74,12 +74,7 @@ void main() {
         ),
       );
       await fakeTaskRepository.saveTask(
-        Task(
-          id: 't1',
-          title: 'Task 1',
-          isCompleted: true,
-          createdAt: now,
-        ),
+        Task(id: 't1', title: 'Task 1', isCompleted: true, createdAt: now),
       );
 
       final cubit = TodayCubit(
@@ -110,10 +105,7 @@ void main() {
 
       var navigated = false;
       await tester.pumpWidget(
-        createSubject(
-          cubit: cubit,
-          onNavigateToFocus: () => navigated = true,
-        ),
+        createSubject(cubit: cubit, onNavigateToFocus: () => navigated = true),
       );
       await tester.pump();
 

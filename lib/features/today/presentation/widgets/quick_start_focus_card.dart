@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
 class QuickStartFocusCard extends StatelessWidget {
-  const QuickStartFocusCard({
-    super.key,
-    required this.onStartPressed,
-  });
+  const QuickStartFocusCard({super.key, required this.onStartPressed});
 
   final VoidCallback onStartPressed;
 
@@ -17,10 +14,7 @@ class QuickStartFocusCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            theme.colorScheme.primary,
-            theme.colorScheme.tertiary,
-          ],
+          colors: [theme.colorScheme.primary, theme.colorScheme.tertiary],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -78,4 +72,3 @@ class QuickStartFocusCard extends StatelessWidget {
     );
   }
 }
-
