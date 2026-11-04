@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:focuspilot/features/focus/presentation/controllers/focus_bloc.dart';
 import 'package:focuspilot/features/focus/presentation/controllers/focus_event.dart';
 import 'package:focuspilot/features/focus/presentation/focus_screen.dart';
+import 'package:focuspilot/features/settings/presentation/widgets/settings_sheet.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
 import 'package:focuspilot/features/tasks/presentation/tasks_screen.dart';
 import 'package:focuspilot/features/today/presentation/today_screen.dart';
@@ -49,7 +50,16 @@ class _AppShellState extends State<AppShell> {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('FocusPilot')),
+      appBar: AppBar(
+        title: const Text('FocusPilot'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings',
+            onPressed: () => SettingsSheet.show(context),
+          ),
+        ],
+      ),
       body: screens[_selectedIndex],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
