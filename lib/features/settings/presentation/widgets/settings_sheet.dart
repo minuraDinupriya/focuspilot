@@ -164,7 +164,7 @@ class _DurationSelector extends StatelessWidget {
     int current = selectedValue;
     final controller = TextEditingController(text: current.toString());
 
-    final customVal = await showDialog<int>(
+    await showDialog<int>(
       context: context,
       builder: (dialogCtx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
