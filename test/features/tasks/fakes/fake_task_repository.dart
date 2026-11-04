@@ -1,11 +1,14 @@
 import 'dart:async';
 
+import 'package:focuspilot/features/tasks/domain/models/subtask.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
 import 'package:focuspilot/features/tasks/domain/repositories/task_repository.dart';
 
 class FakeTaskRepository implements TaskRepository {
   final _controller = StreamController<List<Task>>.broadcast();
   final List<Task> _tasks = [];
+
+  List<Task> get tasks => List.unmodifiable(_tasks);
 
   void emitTasks(List<Task> tasks) {
     _tasks.clear();
@@ -62,6 +65,51 @@ class FakeTaskRepository implements TaskRepository {
         clearCompletedAt: task.isCompleted,
       );
       await saveTask(updated);
+    }
+  }
+
+  @override
+  Future<void> addSubtask(String taskId, String title) async {
+    final task = await getTaskById(taskId);
+    if (task == null) return;
+
+    final newSubtask = Subtask.create(
+      taskId: taskId,
+      title: title,
+      orderIndex: task.subtasks.length,
+    );
+    final updated = task.copyWith(subtasks: [...task.subtasks, newSubtask]);
+    await saveTask(updated);
+  }
+
+  @override
+  Future<void> toggleSubtaskCompletion(String subtaskId) async {
+    for (var i = 0; i < _tasks.length; i++) {
+      final task = _tasks[i];
+      final subtaskIndex = task.subtasks.indexWhere((s) => s.id == subtaskId);
+      if (subtaskIndex >= 0) {
+        final currentSubtask = task.subtasks[subtaskIndex];
+        final updatedSubtasks = List<Subtask>.from(task.subtasks);
+        updatedSubtasks[subtaskIndex] = currentSubtask.copyWith(
+          isCompleted: !currentSubtask.isCompleted,
+        );
+        await saveTask(task.copyWith(subtasks: updatedSubtasks));
+        return;
+      }
+    }
+  }
+
+  @override
+  Future<void> deleteSubtask(String subtaskId) async {
+    for (var i = 0; i < _tasks.length; i++) {
+      final task = _tasks[i];
+      if (task.subtasks.any((s) => s.id == subtaskId)) {
+        final updatedSubtasks = task.subtasks
+            .where((s) => s.id != subtaskId)
+            .toList();
+        await saveTask(task.copyWith(subtasks: updatedSubtasks));
+        return;
+      }
     }
   }
 

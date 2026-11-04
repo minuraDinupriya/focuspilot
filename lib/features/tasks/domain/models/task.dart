@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:focuspilot/features/tasks/domain/models/subtask.dart';
 import 'package:focuspilot/features/tasks/domain/models/task_priority.dart';
 import 'package:uuid/uuid.dart';
 
@@ -12,6 +13,11 @@ class Task extends Equatable {
     this.dueDate,
     required this.createdAt,
     this.completedAt,
+    this.category,
+    this.tags = const [],
+    this.estimatedMinutes,
+    this.recurrenceRule,
+    this.subtasks = const [],
   });
 
   final String id;
@@ -22,12 +28,34 @@ class Task extends Equatable {
   final DateTime? dueDate;
   final DateTime createdAt;
   final DateTime? completedAt;
+  final String? category;
+  final List<String> tags;
+  final int? estimatedMinutes;
+  final String? recurrenceRule;
+  final List<Subtask> subtasks;
+
+  int get completedSubtasksCount => subtasks.where((s) => s.isCompleted).length;
+
+  double get subtasksProgress {
+    if (subtasks.isEmpty) return isCompleted ? 1.0 : 0.0;
+    return (completedSubtasksCount / subtasks.length).clamp(0.0, 1.0);
+  }
+
+  bool get isOverdue {
+    if (isCompleted || dueDate == null) return false;
+    return dueDate!.isBefore(DateTime.now());
+  }
 
   factory Task.create({
     required String title,
     String? description,
     TaskPriority priority = TaskPriority.medium,
     DateTime? dueDate,
+    String? category,
+    List<String> tags = const [],
+    int? estimatedMinutes,
+    String? recurrenceRule,
+    List<Subtask> subtasks = const [],
   }) {
     return Task(
       id: const Uuid().v4(),
@@ -40,6 +68,13 @@ class Task extends Equatable {
       dueDate: dueDate,
       createdAt: DateTime.now(),
       completedAt: null,
+      category: category?.trim().isEmpty ?? true ? null : category?.trim(),
+      tags: tags,
+      estimatedMinutes: estimatedMinutes,
+      recurrenceRule: recurrenceRule?.trim().isEmpty ?? true
+          ? null
+          : recurrenceRule?.trim(),
+      subtasks: subtasks,
     );
   }
 
@@ -52,9 +87,17 @@ class Task extends Equatable {
     DateTime? dueDate,
     DateTime? createdAt,
     DateTime? completedAt,
+    String? category,
+    List<String>? tags,
+    int? estimatedMinutes,
+    String? recurrenceRule,
+    List<Subtask>? subtasks,
     bool clearDescription = false,
     bool clearDueDate = false,
     bool clearCompletedAt = false,
+    bool clearCategory = false,
+    bool clearEstimatedMinutes = false,
+    bool clearRecurrenceRule = false,
   }) {
     return Task(
       id: id ?? this.id,
@@ -65,6 +108,15 @@ class Task extends Equatable {
       dueDate: clearDueDate ? null : (dueDate ?? this.dueDate),
       createdAt: createdAt ?? this.createdAt,
       completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),
+      category: clearCategory ? null : (category ?? this.category),
+      tags: tags ?? this.tags,
+      estimatedMinutes: clearEstimatedMinutes
+          ? null
+          : (estimatedMinutes ?? this.estimatedMinutes),
+      recurrenceRule: clearRecurrenceRule
+          ? null
+          : (recurrenceRule ?? this.recurrenceRule),
+      subtasks: subtasks ?? this.subtasks,
     );
   }
 
@@ -78,5 +130,10 @@ class Task extends Equatable {
     dueDate,
     createdAt,
     completedAt,
+    category,
+    tags,
+    estimatedMinutes,
+    recurrenceRule,
+    subtasks,
   ];
 }
