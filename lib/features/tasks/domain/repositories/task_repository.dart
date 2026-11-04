@@ -12,4 +12,10 @@ abstract class TaskRepository {
   Future<void> deleteTask(String id);
 
   Future<void> toggleTaskCompletion(String id);
+
+  Future<void> addSubtask(String taskId, String title);
+
+  Future<void> toggleSubtaskCompletion(String subtaskId);
+
+  Future<void> deleteSubtask(String subtaskId);
 }

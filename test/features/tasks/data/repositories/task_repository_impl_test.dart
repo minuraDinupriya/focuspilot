@@ -110,5 +110,70 @@ void main() {
 
       await expectation;
     });
+
+    test(
+      'persists category, tags, estimatedMinutes and recurrenceRule',
+      () async {
+        final advancedTask = Task(
+          id: 'task-adv',
+          title: 'Algorithms Homework',
+          category: 'Study',
+          tags: const ['cs101', 'midterm'],
+          estimatedMinutes: 90,
+          recurrenceRule: 'weekly',
+          createdAt: DateTime(2026, 11, 4, 10, 0),
+        );
+
+        await repository.saveTask(advancedTask);
+        final retrieved = await repository.getTaskById('task-adv');
+
+        expect(retrieved, isNotNull);
+        expect(retrieved!.category, 'Study');
+        expect(retrieved.tags, ['cs101', 'midterm']);
+        expect(retrieved.estimatedMinutes, 90);
+        expect(retrieved.recurrenceRule, 'weekly');
+      },
+    );
+
+    test(
+      'addSubtask, toggleSubtaskCompletion, and deleteSubtask operations',
+      () async {
+        await repository.saveTask(task1);
+
+        await repository.addSubtask('task-1', 'Read Chapter 4');
+        await repository.addSubtask('task-1', 'Do Exercises 1-5');
+
+        var taskWithSubs = await repository.getTaskById('task-1');
+        expect(taskWithSubs!.subtasks.length, 2);
+        expect(taskWithSubs.subtasks[0].title, 'Read Chapter 4');
+        expect(taskWithSubs.subtasks[0].isCompleted, isFalse);
+
+        final firstSubtaskId = taskWithSubs.subtasks[0].id;
+        await repository.toggleSubtaskCompletion(firstSubtaskId);
+
+        taskWithSubs = await repository.getTaskById('task-1');
+        expect(taskWithSubs!.subtasks[0].isCompleted, isTrue);
+        expect(taskWithSubs.completedSubtasksCount, 1);
+        expect(taskWithSubs.subtasksProgress, 0.5);
+
+        await repository.deleteSubtask(firstSubtaskId);
+        taskWithSubs = await repository.getTaskById('task-1');
+        expect(taskWithSubs!.subtasks.length, 1);
+        expect(taskWithSubs.subtasks[0].title, 'Do Exercises 1-5');
+      },
+    );
+
+    test('deleting a task cascades and removes all of its subtasks', () async {
+      await repository.saveTask(task1);
+      await repository.addSubtask('task-1', 'Subtask A');
+      await repository.addSubtask('task-1', 'Subtask B');
+
+      await repository.deleteTask('task-1');
+      final tasks = await repository.getTasks();
+      expect(tasks, isEmpty);
+
+      final subtaskRows = await database.select(database.subtaskEntries).get();
+      expect(subtaskRows, isEmpty);
+    });
   });
 }

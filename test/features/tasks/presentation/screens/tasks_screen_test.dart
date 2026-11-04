@@ -8,7 +8,7 @@ import 'package:focuspilot/features/tasks/presentation/tasks_screen.dart';
 import 'package:focuspilot/features/tasks/presentation/widgets/task_filter_bar.dart';
 import 'package:focuspilot/features/tasks/presentation/widgets/task_item_tile.dart';
 
-import '../controllers/tasks_cubit_test.dart';
+import '../../fakes/fake_task_repository.dart';
 
 void main() {
   late FakeTaskRepository repository;

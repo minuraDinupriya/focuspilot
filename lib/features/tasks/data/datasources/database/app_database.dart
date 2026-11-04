@@ -16,6 +16,22 @@ class TaskEntries extends Table {
   DateTimeColumn get dueDate => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get completedAt => dateTime().nullable()();
+  TextColumn get category => text().nullable()();
+  TextColumn get tags => text().withDefault(const Constant(''))();
+  IntColumn get estimatedMinutes => integer().nullable()();
+  TextColumn get recurrenceRule => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class SubtaskEntries extends Table {
+  TextColumn get id => text()();
+  TextColumn get taskId =>
+      text().references(TaskEntries, #id, onDelete: KeyAction.cascade)();
+  TextColumn get title => text().withLength(min: 1, max: 200)();
+  BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
+  IntColumn get orderIndex => integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -71,6 +87,7 @@ class TimerPresetEntries extends Table {
 @DriftDatabase(
   tables: [
     TaskEntries,
+    SubtaskEntries,
     FocusSessionEntries,
     UserSettingsEntries,
     TimerPresetEntries,
@@ -80,10 +97,13 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+    beforeOpen: (details) async {
+      await customStatement('PRAGMA foreign_keys = ON');
+    },
     onCreate: (m) => m.createAll(),
     onUpgrade: (m, from, to) async {
       if (from < 2) {
@@ -117,6 +137,13 @@ class AppDatabase extends _$AppDatabase {
           userSettingsEntries,
           userSettingsEntries.hapticEnabled,
         );
+      }
+      if (from < 6) {
+        await m.addColumn(taskEntries, taskEntries.category);
+        await m.addColumn(taskEntries, taskEntries.tags);
+        await m.addColumn(taskEntries, taskEntries.estimatedMinutes);
+        await m.addColumn(taskEntries, taskEntries.recurrenceRule);
+        await m.createTable(subtaskEntries);
       }
     },
   );

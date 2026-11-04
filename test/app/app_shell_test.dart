@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:focuspilot/app/app.dart';
 
 import '../features/focus/fakes/fake_focus_session_repository.dart';
-import '../features/tasks/presentation/controllers/tasks_cubit_test.dart';
+import '../features/tasks/fakes/fake_task_repository.dart';
 
 void main() {
   group('AppShell navigation', () {
