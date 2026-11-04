@@ -6,12 +6,14 @@ class UserSettings extends Equatable {
     this.shortBreakDurationMinutes = 5,
     this.longBreakDurationMinutes = 15,
     this.dailyGoalMinutes = 120,
+    this.activePresetId = 'preset-classic',
   });
 
   final int workDurationMinutes;
   final int shortBreakDurationMinutes;
   final int longBreakDurationMinutes;
   final int dailyGoalMinutes;
+  final String? activePresetId;
 
   int get workDurationSeconds => workDurationMinutes * 60;
   int get shortBreakDurationSeconds => shortBreakDurationMinutes * 60;
@@ -22,6 +24,8 @@ class UserSettings extends Equatable {
     int? shortBreakDurationMinutes,
     int? longBreakDurationMinutes,
     int? dailyGoalMinutes,
+    String? activePresetId,
+    bool clearActivePresetId = false,
   }) {
     return UserSettings(
       workDurationMinutes: workDurationMinutes ?? this.workDurationMinutes,
@@ -30,6 +34,9 @@ class UserSettings extends Equatable {
       longBreakDurationMinutes:
           longBreakDurationMinutes ?? this.longBreakDurationMinutes,
       dailyGoalMinutes: dailyGoalMinutes ?? this.dailyGoalMinutes,
+      activePresetId: clearActivePresetId
+          ? null
+          : (activePresetId ?? this.activePresetId),
     );
   }
 
@@ -39,5 +46,6 @@ class UserSettings extends Equatable {
     shortBreakDurationMinutes,
     longBreakDurationMinutes,
     dailyGoalMinutes,
+    activePresetId,
   ];
 }

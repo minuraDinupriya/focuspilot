@@ -42,17 +42,39 @@ class UserSettingsEntries extends Table {
       integer().withDefault(const Constant(15))();
   IntColumn get dailyGoalMinutes =>
       integer().withDefault(const Constant(120))();
+  TextColumn get activePresetId =>
+      text().nullable().withDefault(const Constant('preset-classic'))();
 
   @override
   Set<Column> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [TaskEntries, FocusSessionEntries, UserSettingsEntries])
+class TimerPresetEntries extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  IntColumn get workDurationMinutes => integer()();
+  IntColumn get shortBreakDurationMinutes => integer()();
+  IntColumn get longBreakDurationMinutes => integer()();
+  IntColumn get longBreakInterval => integer().withDefault(const Constant(4))();
+  BoolColumn get isDefault => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DriftDatabase(
+  tables: [
+    TaskEntries,
+    FocusSessionEntries,
+    UserSettingsEntries,
+    TimerPresetEntries,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -63,6 +85,13 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 3) {
         await m.createTable(userSettingsEntries);
+      }
+      if (from < 4) {
+        await m.addColumn(
+          userSettingsEntries,
+          userSettingsEntries.activePresetId,
+        );
+        await m.createTable(timerPresetEntries);
       }
     },
   );

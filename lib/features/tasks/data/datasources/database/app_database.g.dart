@@ -967,6 +967,18 @@ class $UserSettingsEntriesTable extends UserSettingsEntries
     requiredDuringInsert: false,
     defaultValue: const Constant(120),
   );
+  static const VerificationMeta _activePresetIdMeta = const VerificationMeta(
+    'activePresetId',
+  );
+  @override
+  late final GeneratedColumn<String> activePresetId = GeneratedColumn<String>(
+    'active_preset_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('preset-classic'),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -974,6 +986,7 @@ class $UserSettingsEntriesTable extends UserSettingsEntries
     shortBreakDurationMinutes,
     longBreakDurationMinutes,
     dailyGoalMinutes,
+    activePresetId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1028,6 +1041,15 @@ class $UserSettingsEntriesTable extends UserSettingsEntries
         ),
       );
     }
+    if (data.containsKey('active_preset_id')) {
+      context.handle(
+        _activePresetIdMeta,
+        activePresetId.isAcceptableOrUnknown(
+          data['active_preset_id']!,
+          _activePresetIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1057,6 +1079,10 @@ class $UserSettingsEntriesTable extends UserSettingsEntries
         DriftSqlType.int,
         data['${effectivePrefix}daily_goal_minutes'],
       )!,
+      activePresetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}active_preset_id'],
+      ),
     );
   }
 
@@ -1073,12 +1099,14 @@ class UserSettingsEntry extends DataClass
   final int shortBreakDurationMinutes;
   final int longBreakDurationMinutes;
   final int dailyGoalMinutes;
+  final String? activePresetId;
   const UserSettingsEntry({
     required this.id,
     required this.workDurationMinutes,
     required this.shortBreakDurationMinutes,
     required this.longBreakDurationMinutes,
     required this.dailyGoalMinutes,
+    this.activePresetId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1092,6 +1120,9 @@ class UserSettingsEntry extends DataClass
       longBreakDurationMinutes,
     );
     map['daily_goal_minutes'] = Variable<int>(dailyGoalMinutes);
+    if (!nullToAbsent || activePresetId != null) {
+      map['active_preset_id'] = Variable<String>(activePresetId);
+    }
     return map;
   }
 
@@ -1102,6 +1133,9 @@ class UserSettingsEntry extends DataClass
       shortBreakDurationMinutes: Value(shortBreakDurationMinutes),
       longBreakDurationMinutes: Value(longBreakDurationMinutes),
       dailyGoalMinutes: Value(dailyGoalMinutes),
+      activePresetId: activePresetId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(activePresetId),
     );
   }
 
@@ -1122,6 +1156,7 @@ class UserSettingsEntry extends DataClass
         json['longBreakDurationMinutes'],
       ),
       dailyGoalMinutes: serializer.fromJson<int>(json['dailyGoalMinutes']),
+      activePresetId: serializer.fromJson<String?>(json['activePresetId']),
     );
   }
   @override
@@ -1137,6 +1172,7 @@ class UserSettingsEntry extends DataClass
         longBreakDurationMinutes,
       ),
       'dailyGoalMinutes': serializer.toJson<int>(dailyGoalMinutes),
+      'activePresetId': serializer.toJson<String?>(activePresetId),
     };
   }
 
@@ -1146,6 +1182,7 @@ class UserSettingsEntry extends DataClass
     int? shortBreakDurationMinutes,
     int? longBreakDurationMinutes,
     int? dailyGoalMinutes,
+    Value<String?> activePresetId = const Value.absent(),
   }) => UserSettingsEntry(
     id: id ?? this.id,
     workDurationMinutes: workDurationMinutes ?? this.workDurationMinutes,
@@ -1154,6 +1191,9 @@ class UserSettingsEntry extends DataClass
     longBreakDurationMinutes:
         longBreakDurationMinutes ?? this.longBreakDurationMinutes,
     dailyGoalMinutes: dailyGoalMinutes ?? this.dailyGoalMinutes,
+    activePresetId: activePresetId.present
+        ? activePresetId.value
+        : this.activePresetId,
   );
   UserSettingsEntry copyWithCompanion(UserSettingsEntriesCompanion data) {
     return UserSettingsEntry(
@@ -1170,6 +1210,9 @@ class UserSettingsEntry extends DataClass
       dailyGoalMinutes: data.dailyGoalMinutes.present
           ? data.dailyGoalMinutes.value
           : this.dailyGoalMinutes,
+      activePresetId: data.activePresetId.present
+          ? data.activePresetId.value
+          : this.activePresetId,
     );
   }
 
@@ -1180,7 +1223,8 @@ class UserSettingsEntry extends DataClass
           ..write('workDurationMinutes: $workDurationMinutes, ')
           ..write('shortBreakDurationMinutes: $shortBreakDurationMinutes, ')
           ..write('longBreakDurationMinutes: $longBreakDurationMinutes, ')
-          ..write('dailyGoalMinutes: $dailyGoalMinutes')
+          ..write('dailyGoalMinutes: $dailyGoalMinutes, ')
+          ..write('activePresetId: $activePresetId')
           ..write(')'))
         .toString();
   }
@@ -1192,6 +1236,7 @@ class UserSettingsEntry extends DataClass
     shortBreakDurationMinutes,
     longBreakDurationMinutes,
     dailyGoalMinutes,
+    activePresetId,
   );
   @override
   bool operator ==(Object other) =>
@@ -1201,7 +1246,8 @@ class UserSettingsEntry extends DataClass
           other.workDurationMinutes == this.workDurationMinutes &&
           other.shortBreakDurationMinutes == this.shortBreakDurationMinutes &&
           other.longBreakDurationMinutes == this.longBreakDurationMinutes &&
-          other.dailyGoalMinutes == this.dailyGoalMinutes);
+          other.dailyGoalMinutes == this.dailyGoalMinutes &&
+          other.activePresetId == this.activePresetId);
 }
 
 class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
@@ -1210,6 +1256,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
   final Value<int> shortBreakDurationMinutes;
   final Value<int> longBreakDurationMinutes;
   final Value<int> dailyGoalMinutes;
+  final Value<String?> activePresetId;
   final Value<int> rowid;
   const UserSettingsEntriesCompanion({
     this.id = const Value.absent(),
@@ -1217,6 +1264,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
     this.shortBreakDurationMinutes = const Value.absent(),
     this.longBreakDurationMinutes = const Value.absent(),
     this.dailyGoalMinutes = const Value.absent(),
+    this.activePresetId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   UserSettingsEntriesCompanion.insert({
@@ -1225,6 +1273,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
     this.shortBreakDurationMinutes = const Value.absent(),
     this.longBreakDurationMinutes = const Value.absent(),
     this.dailyGoalMinutes = const Value.absent(),
+    this.activePresetId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id);
   static Insertable<UserSettingsEntry> custom({
@@ -1233,6 +1282,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
     Expression<int>? shortBreakDurationMinutes,
     Expression<int>? longBreakDurationMinutes,
     Expression<int>? dailyGoalMinutes,
+    Expression<String>? activePresetId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1244,6 +1294,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
       if (longBreakDurationMinutes != null)
         'long_break_duration_minutes': longBreakDurationMinutes,
       if (dailyGoalMinutes != null) 'daily_goal_minutes': dailyGoalMinutes,
+      if (activePresetId != null) 'active_preset_id': activePresetId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1254,6 +1305,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
     Value<int>? shortBreakDurationMinutes,
     Value<int>? longBreakDurationMinutes,
     Value<int>? dailyGoalMinutes,
+    Value<String?>? activePresetId,
     Value<int>? rowid,
   }) {
     return UserSettingsEntriesCompanion(
@@ -1264,6 +1316,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
       longBreakDurationMinutes:
           longBreakDurationMinutes ?? this.longBreakDurationMinutes,
       dailyGoalMinutes: dailyGoalMinutes ?? this.dailyGoalMinutes,
+      activePresetId: activePresetId ?? this.activePresetId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1290,6 +1343,9 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
     if (dailyGoalMinutes.present) {
       map['daily_goal_minutes'] = Variable<int>(dailyGoalMinutes.value);
     }
+    if (activePresetId.present) {
+      map['active_preset_id'] = Variable<String>(activePresetId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1304,6 +1360,513 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
           ..write('shortBreakDurationMinutes: $shortBreakDurationMinutes, ')
           ..write('longBreakDurationMinutes: $longBreakDurationMinutes, ')
           ..write('dailyGoalMinutes: $dailyGoalMinutes, ')
+          ..write('activePresetId: $activePresetId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $TimerPresetEntriesTable extends TimerPresetEntries
+    with TableInfo<$TimerPresetEntriesTable, TimerPresetEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TimerPresetEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _workDurationMinutesMeta =
+      const VerificationMeta('workDurationMinutes');
+  @override
+  late final GeneratedColumn<int> workDurationMinutes = GeneratedColumn<int>(
+    'work_duration_minutes',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _shortBreakDurationMinutesMeta =
+      const VerificationMeta('shortBreakDurationMinutes');
+  @override
+  late final GeneratedColumn<int> shortBreakDurationMinutes =
+      GeneratedColumn<int>(
+        'short_break_duration_minutes',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _longBreakDurationMinutesMeta =
+      const VerificationMeta('longBreakDurationMinutes');
+  @override
+  late final GeneratedColumn<int> longBreakDurationMinutes =
+      GeneratedColumn<int>(
+        'long_break_duration_minutes',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _longBreakIntervalMeta = const VerificationMeta(
+    'longBreakInterval',
+  );
+  @override
+  late final GeneratedColumn<int> longBreakInterval = GeneratedColumn<int>(
+    'long_break_interval',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(4),
+  );
+  static const VerificationMeta _isDefaultMeta = const VerificationMeta(
+    'isDefault',
+  );
+  @override
+  late final GeneratedColumn<bool> isDefault = GeneratedColumn<bool>(
+    'is_default',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_default" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    workDurationMinutes,
+    shortBreakDurationMinutes,
+    longBreakDurationMinutes,
+    longBreakInterval,
+    isDefault,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'timer_preset_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TimerPresetEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('work_duration_minutes')) {
+      context.handle(
+        _workDurationMinutesMeta,
+        workDurationMinutes.isAcceptableOrUnknown(
+          data['work_duration_minutes']!,
+          _workDurationMinutesMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_workDurationMinutesMeta);
+    }
+    if (data.containsKey('short_break_duration_minutes')) {
+      context.handle(
+        _shortBreakDurationMinutesMeta,
+        shortBreakDurationMinutes.isAcceptableOrUnknown(
+          data['short_break_duration_minutes']!,
+          _shortBreakDurationMinutesMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_shortBreakDurationMinutesMeta);
+    }
+    if (data.containsKey('long_break_duration_minutes')) {
+      context.handle(
+        _longBreakDurationMinutesMeta,
+        longBreakDurationMinutes.isAcceptableOrUnknown(
+          data['long_break_duration_minutes']!,
+          _longBreakDurationMinutesMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_longBreakDurationMinutesMeta);
+    }
+    if (data.containsKey('long_break_interval')) {
+      context.handle(
+        _longBreakIntervalMeta,
+        longBreakInterval.isAcceptableOrUnknown(
+          data['long_break_interval']!,
+          _longBreakIntervalMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_default')) {
+      context.handle(
+        _isDefaultMeta,
+        isDefault.isAcceptableOrUnknown(data['is_default']!, _isDefaultMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TimerPresetEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TimerPresetEntry(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      workDurationMinutes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}work_duration_minutes'],
+      )!,
+      shortBreakDurationMinutes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}short_break_duration_minutes'],
+      )!,
+      longBreakDurationMinutes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}long_break_duration_minutes'],
+      )!,
+      longBreakInterval: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}long_break_interval'],
+      )!,
+      isDefault: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_default'],
+      )!,
+    );
+  }
+
+  @override
+  $TimerPresetEntriesTable createAlias(String alias) {
+    return $TimerPresetEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class TimerPresetEntry extends DataClass
+    implements Insertable<TimerPresetEntry> {
+  final String id;
+  final String name;
+  final int workDurationMinutes;
+  final int shortBreakDurationMinutes;
+  final int longBreakDurationMinutes;
+  final int longBreakInterval;
+  final bool isDefault;
+  const TimerPresetEntry({
+    required this.id,
+    required this.name,
+    required this.workDurationMinutes,
+    required this.shortBreakDurationMinutes,
+    required this.longBreakDurationMinutes,
+    required this.longBreakInterval,
+    required this.isDefault,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['work_duration_minutes'] = Variable<int>(workDurationMinutes);
+    map['short_break_duration_minutes'] = Variable<int>(
+      shortBreakDurationMinutes,
+    );
+    map['long_break_duration_minutes'] = Variable<int>(
+      longBreakDurationMinutes,
+    );
+    map['long_break_interval'] = Variable<int>(longBreakInterval);
+    map['is_default'] = Variable<bool>(isDefault);
+    return map;
+  }
+
+  TimerPresetEntriesCompanion toCompanion(bool nullToAbsent) {
+    return TimerPresetEntriesCompanion(
+      id: Value(id),
+      name: Value(name),
+      workDurationMinutes: Value(workDurationMinutes),
+      shortBreakDurationMinutes: Value(shortBreakDurationMinutes),
+      longBreakDurationMinutes: Value(longBreakDurationMinutes),
+      longBreakInterval: Value(longBreakInterval),
+      isDefault: Value(isDefault),
+    );
+  }
+
+  factory TimerPresetEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TimerPresetEntry(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      workDurationMinutes: serializer.fromJson<int>(
+        json['workDurationMinutes'],
+      ),
+      shortBreakDurationMinutes: serializer.fromJson<int>(
+        json['shortBreakDurationMinutes'],
+      ),
+      longBreakDurationMinutes: serializer.fromJson<int>(
+        json['longBreakDurationMinutes'],
+      ),
+      longBreakInterval: serializer.fromJson<int>(json['longBreakInterval']),
+      isDefault: serializer.fromJson<bool>(json['isDefault']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'workDurationMinutes': serializer.toJson<int>(workDurationMinutes),
+      'shortBreakDurationMinutes': serializer.toJson<int>(
+        shortBreakDurationMinutes,
+      ),
+      'longBreakDurationMinutes': serializer.toJson<int>(
+        longBreakDurationMinutes,
+      ),
+      'longBreakInterval': serializer.toJson<int>(longBreakInterval),
+      'isDefault': serializer.toJson<bool>(isDefault),
+    };
+  }
+
+  TimerPresetEntry copyWith({
+    String? id,
+    String? name,
+    int? workDurationMinutes,
+    int? shortBreakDurationMinutes,
+    int? longBreakDurationMinutes,
+    int? longBreakInterval,
+    bool? isDefault,
+  }) => TimerPresetEntry(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    workDurationMinutes: workDurationMinutes ?? this.workDurationMinutes,
+    shortBreakDurationMinutes:
+        shortBreakDurationMinutes ?? this.shortBreakDurationMinutes,
+    longBreakDurationMinutes:
+        longBreakDurationMinutes ?? this.longBreakDurationMinutes,
+    longBreakInterval: longBreakInterval ?? this.longBreakInterval,
+    isDefault: isDefault ?? this.isDefault,
+  );
+  TimerPresetEntry copyWithCompanion(TimerPresetEntriesCompanion data) {
+    return TimerPresetEntry(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      workDurationMinutes: data.workDurationMinutes.present
+          ? data.workDurationMinutes.value
+          : this.workDurationMinutes,
+      shortBreakDurationMinutes: data.shortBreakDurationMinutes.present
+          ? data.shortBreakDurationMinutes.value
+          : this.shortBreakDurationMinutes,
+      longBreakDurationMinutes: data.longBreakDurationMinutes.present
+          ? data.longBreakDurationMinutes.value
+          : this.longBreakDurationMinutes,
+      longBreakInterval: data.longBreakInterval.present
+          ? data.longBreakInterval.value
+          : this.longBreakInterval,
+      isDefault: data.isDefault.present ? data.isDefault.value : this.isDefault,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TimerPresetEntry(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('workDurationMinutes: $workDurationMinutes, ')
+          ..write('shortBreakDurationMinutes: $shortBreakDurationMinutes, ')
+          ..write('longBreakDurationMinutes: $longBreakDurationMinutes, ')
+          ..write('longBreakInterval: $longBreakInterval, ')
+          ..write('isDefault: $isDefault')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    workDurationMinutes,
+    shortBreakDurationMinutes,
+    longBreakDurationMinutes,
+    longBreakInterval,
+    isDefault,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TimerPresetEntry &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.workDurationMinutes == this.workDurationMinutes &&
+          other.shortBreakDurationMinutes == this.shortBreakDurationMinutes &&
+          other.longBreakDurationMinutes == this.longBreakDurationMinutes &&
+          other.longBreakInterval == this.longBreakInterval &&
+          other.isDefault == this.isDefault);
+}
+
+class TimerPresetEntriesCompanion extends UpdateCompanion<TimerPresetEntry> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<int> workDurationMinutes;
+  final Value<int> shortBreakDurationMinutes;
+  final Value<int> longBreakDurationMinutes;
+  final Value<int> longBreakInterval;
+  final Value<bool> isDefault;
+  final Value<int> rowid;
+  const TimerPresetEntriesCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.workDurationMinutes = const Value.absent(),
+    this.shortBreakDurationMinutes = const Value.absent(),
+    this.longBreakDurationMinutes = const Value.absent(),
+    this.longBreakInterval = const Value.absent(),
+    this.isDefault = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TimerPresetEntriesCompanion.insert({
+    required String id,
+    required String name,
+    required int workDurationMinutes,
+    required int shortBreakDurationMinutes,
+    required int longBreakDurationMinutes,
+    this.longBreakInterval = const Value.absent(),
+    this.isDefault = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       workDurationMinutes = Value(workDurationMinutes),
+       shortBreakDurationMinutes = Value(shortBreakDurationMinutes),
+       longBreakDurationMinutes = Value(longBreakDurationMinutes);
+  static Insertable<TimerPresetEntry> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<int>? workDurationMinutes,
+    Expression<int>? shortBreakDurationMinutes,
+    Expression<int>? longBreakDurationMinutes,
+    Expression<int>? longBreakInterval,
+    Expression<bool>? isDefault,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (workDurationMinutes != null)
+        'work_duration_minutes': workDurationMinutes,
+      if (shortBreakDurationMinutes != null)
+        'short_break_duration_minutes': shortBreakDurationMinutes,
+      if (longBreakDurationMinutes != null)
+        'long_break_duration_minutes': longBreakDurationMinutes,
+      if (longBreakInterval != null) 'long_break_interval': longBreakInterval,
+      if (isDefault != null) 'is_default': isDefault,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TimerPresetEntriesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<int>? workDurationMinutes,
+    Value<int>? shortBreakDurationMinutes,
+    Value<int>? longBreakDurationMinutes,
+    Value<int>? longBreakInterval,
+    Value<bool>? isDefault,
+    Value<int>? rowid,
+  }) {
+    return TimerPresetEntriesCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      workDurationMinutes: workDurationMinutes ?? this.workDurationMinutes,
+      shortBreakDurationMinutes:
+          shortBreakDurationMinutes ?? this.shortBreakDurationMinutes,
+      longBreakDurationMinutes:
+          longBreakDurationMinutes ?? this.longBreakDurationMinutes,
+      longBreakInterval: longBreakInterval ?? this.longBreakInterval,
+      isDefault: isDefault ?? this.isDefault,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (workDurationMinutes.present) {
+      map['work_duration_minutes'] = Variable<int>(workDurationMinutes.value);
+    }
+    if (shortBreakDurationMinutes.present) {
+      map['short_break_duration_minutes'] = Variable<int>(
+        shortBreakDurationMinutes.value,
+      );
+    }
+    if (longBreakDurationMinutes.present) {
+      map['long_break_duration_minutes'] = Variable<int>(
+        longBreakDurationMinutes.value,
+      );
+    }
+    if (longBreakInterval.present) {
+      map['long_break_interval'] = Variable<int>(longBreakInterval.value);
+    }
+    if (isDefault.present) {
+      map['is_default'] = Variable<bool>(isDefault.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TimerPresetEntriesCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('workDurationMinutes: $workDurationMinutes, ')
+          ..write('shortBreakDurationMinutes: $shortBreakDurationMinutes, ')
+          ..write('longBreakDurationMinutes: $longBreakDurationMinutes, ')
+          ..write('longBreakInterval: $longBreakInterval, ')
+          ..write('isDefault: $isDefault, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1318,6 +1881,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $FocusSessionEntriesTable(this);
   late final $UserSettingsEntriesTable userSettingsEntries =
       $UserSettingsEntriesTable(this);
+  late final $TimerPresetEntriesTable timerPresetEntries =
+      $TimerPresetEntriesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1326,6 +1891,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     taskEntries,
     focusSessionEntries,
     userSettingsEntries,
+    timerPresetEntries,
   ];
 }
 
@@ -1836,6 +2402,7 @@ typedef $$UserSettingsEntriesTableCreateCompanionBuilder =
       Value<int> shortBreakDurationMinutes,
       Value<int> longBreakDurationMinutes,
       Value<int> dailyGoalMinutes,
+      Value<String?> activePresetId,
       Value<int> rowid,
     });
 typedef $$UserSettingsEntriesTableUpdateCompanionBuilder =
@@ -1845,6 +2412,7 @@ typedef $$UserSettingsEntriesTableUpdateCompanionBuilder =
       Value<int> shortBreakDurationMinutes,
       Value<int> longBreakDurationMinutes,
       Value<int> dailyGoalMinutes,
+      Value<String?> activePresetId,
       Value<int> rowid,
     });
 
@@ -1879,6 +2447,11 @@ class $$UserSettingsEntriesTableFilterComposer
 
   ColumnFilters<int> get dailyGoalMinutes => $composableBuilder(
     column: $table.dailyGoalMinutes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get activePresetId => $composableBuilder(
+    column: $table.activePresetId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -1916,6 +2489,11 @@ class $$UserSettingsEntriesTableOrderingComposer
     column: $table.dailyGoalMinutes,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get activePresetId => $composableBuilder(
+    column: $table.activePresetId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$UserSettingsEntriesTableAnnotationComposer
@@ -1947,6 +2525,11 @@ class $$UserSettingsEntriesTableAnnotationComposer
 
   GeneratedColumn<int> get dailyGoalMinutes => $composableBuilder(
     column: $table.dailyGoalMinutes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get activePresetId => $composableBuilder(
+    column: $table.activePresetId,
     builder: (column) => column,
   );
 }
@@ -1999,6 +2582,7 @@ class $$UserSettingsEntriesTableTableManager
                 Value<int> shortBreakDurationMinutes = const Value.absent(),
                 Value<int> longBreakDurationMinutes = const Value.absent(),
                 Value<int> dailyGoalMinutes = const Value.absent(),
+                Value<String?> activePresetId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => UserSettingsEntriesCompanion(
                 id: id,
@@ -2006,6 +2590,7 @@ class $$UserSettingsEntriesTableTableManager
                 shortBreakDurationMinutes: shortBreakDurationMinutes,
                 longBreakDurationMinutes: longBreakDurationMinutes,
                 dailyGoalMinutes: dailyGoalMinutes,
+                activePresetId: activePresetId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2015,6 +2600,7 @@ class $$UserSettingsEntriesTableTableManager
                 Value<int> shortBreakDurationMinutes = const Value.absent(),
                 Value<int> longBreakDurationMinutes = const Value.absent(),
                 Value<int> dailyGoalMinutes = const Value.absent(),
+                Value<String?> activePresetId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => UserSettingsEntriesCompanion.insert(
                 id: id,
@@ -2022,6 +2608,7 @@ class $$UserSettingsEntriesTableTableManager
                 shortBreakDurationMinutes: shortBreakDurationMinutes,
                 longBreakDurationMinutes: longBreakDurationMinutes,
                 dailyGoalMinutes: dailyGoalMinutes,
+                activePresetId: activePresetId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -2064,6 +2651,276 @@ typedef $$UserSettingsEntriesTableProcessedTableManager =
       UserSettingsEntry,
       PrefetchHooks Function()
     >;
+typedef $$TimerPresetEntriesTableCreateCompanionBuilder =
+    TimerPresetEntriesCompanion Function({
+      required String id,
+      required String name,
+      required int workDurationMinutes,
+      required int shortBreakDurationMinutes,
+      required int longBreakDurationMinutes,
+      Value<int> longBreakInterval,
+      Value<bool> isDefault,
+      Value<int> rowid,
+    });
+typedef $$TimerPresetEntriesTableUpdateCompanionBuilder =
+    TimerPresetEntriesCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<int> workDurationMinutes,
+      Value<int> shortBreakDurationMinutes,
+      Value<int> longBreakDurationMinutes,
+      Value<int> longBreakInterval,
+      Value<bool> isDefault,
+      Value<int> rowid,
+    });
+
+class $$TimerPresetEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $TimerPresetEntriesTable> {
+  $$TimerPresetEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get workDurationMinutes => $composableBuilder(
+    column: $table.workDurationMinutes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get shortBreakDurationMinutes => $composableBuilder(
+    column: $table.shortBreakDurationMinutes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get longBreakDurationMinutes => $composableBuilder(
+    column: $table.longBreakDurationMinutes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get longBreakInterval => $composableBuilder(
+    column: $table.longBreakInterval,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDefault => $composableBuilder(
+    column: $table.isDefault,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$TimerPresetEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $TimerPresetEntriesTable> {
+  $$TimerPresetEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get workDurationMinutes => $composableBuilder(
+    column: $table.workDurationMinutes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get shortBreakDurationMinutes => $composableBuilder(
+    column: $table.shortBreakDurationMinutes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get longBreakDurationMinutes => $composableBuilder(
+    column: $table.longBreakDurationMinutes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get longBreakInterval => $composableBuilder(
+    column: $table.longBreakInterval,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isDefault => $composableBuilder(
+    column: $table.isDefault,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$TimerPresetEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TimerPresetEntriesTable> {
+  $$TimerPresetEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get workDurationMinutes => $composableBuilder(
+    column: $table.workDurationMinutes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get shortBreakDurationMinutes => $composableBuilder(
+    column: $table.shortBreakDurationMinutes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get longBreakDurationMinutes => $composableBuilder(
+    column: $table.longBreakDurationMinutes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get longBreakInterval => $composableBuilder(
+    column: $table.longBreakInterval,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isDefault =>
+      $composableBuilder(column: $table.isDefault, builder: (column) => column);
+}
+
+class $$TimerPresetEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TimerPresetEntriesTable,
+          TimerPresetEntry,
+          $$TimerPresetEntriesTableFilterComposer,
+          $$TimerPresetEntriesTableOrderingComposer,
+          $$TimerPresetEntriesTableAnnotationComposer,
+          $$TimerPresetEntriesTableCreateCompanionBuilder,
+          $$TimerPresetEntriesTableUpdateCompanionBuilder,
+          (
+            TimerPresetEntry,
+            BaseReferences<
+              _$AppDatabase,
+              $TimerPresetEntriesTable,
+              TimerPresetEntry
+            >,
+          ),
+          TimerPresetEntry,
+          PrefetchHooks Function()
+        > {
+  $$TimerPresetEntriesTableTableManager(
+    _$AppDatabase db,
+    $TimerPresetEntriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TimerPresetEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TimerPresetEntriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TimerPresetEntriesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<int> workDurationMinutes = const Value.absent(),
+                Value<int> shortBreakDurationMinutes = const Value.absent(),
+                Value<int> longBreakDurationMinutes = const Value.absent(),
+                Value<int> longBreakInterval = const Value.absent(),
+                Value<bool> isDefault = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TimerPresetEntriesCompanion(
+                id: id,
+                name: name,
+                workDurationMinutes: workDurationMinutes,
+                shortBreakDurationMinutes: shortBreakDurationMinutes,
+                longBreakDurationMinutes: longBreakDurationMinutes,
+                longBreakInterval: longBreakInterval,
+                isDefault: isDefault,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                required int workDurationMinutes,
+                required int shortBreakDurationMinutes,
+                required int longBreakDurationMinutes,
+                Value<int> longBreakInterval = const Value.absent(),
+                Value<bool> isDefault = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TimerPresetEntriesCompanion.insert(
+                id: id,
+                name: name,
+                workDurationMinutes: workDurationMinutes,
+                shortBreakDurationMinutes: shortBreakDurationMinutes,
+                longBreakDurationMinutes: longBreakDurationMinutes,
+                longBreakInterval: longBreakInterval,
+                isDefault: isDefault,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$TimerPresetEntriesTable, TimerPresetEntry>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $TimerPresetEntriesTable,
+                    TimerPresetEntry
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$TimerPresetEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TimerPresetEntriesTable,
+      TimerPresetEntry,
+      $$TimerPresetEntriesTableFilterComposer,
+      $$TimerPresetEntriesTableOrderingComposer,
+      $$TimerPresetEntriesTableAnnotationComposer,
+      $$TimerPresetEntriesTableCreateCompanionBuilder,
+      $$TimerPresetEntriesTableUpdateCompanionBuilder,
+      (
+        TimerPresetEntry,
+        BaseReferences<
+          _$AppDatabase,
+          $TimerPresetEntriesTable,
+          TimerPresetEntry
+        >,
+      ),
+      TimerPresetEntry,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -2074,4 +2931,6 @@ class $AppDatabaseManager {
       $$FocusSessionEntriesTableTableManager(_db, _db.focusSessionEntries);
   $$UserSettingsEntriesTableTableManager get userSettingsEntries =>
       $$UserSettingsEntriesTableTableManager(_db, _db.userSettingsEntries);
+  $$TimerPresetEntriesTableTableManager get timerPresetEntries =>
+      $$TimerPresetEntriesTableTableManager(_db, _db.timerPresetEntries);
 }

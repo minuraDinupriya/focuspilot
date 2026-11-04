@@ -20,22 +20,25 @@ void main() {
       repository.dispose();
     });
 
-    testWidgets('renders all options and updates settings on choice tap', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: BlocProvider<SettingsCubit>.value(
-              value: cubit,
-              child: const SettingsSheet(),
-            ),
+    Widget createWidgetUnderTest() {
+      return MaterialApp(
+        home: Scaffold(
+          body: BlocProvider<SettingsCubit>.value(
+            value: cubit,
+            child: const SettingsSheet(),
           ),
         ),
       );
+    }
+
+    testWidgets('renders all options and updates settings on choice tap', (
+      tester,
+    ) async {
+      await tester.pumpWidget(createWidgetUnderTest());
       await tester.pumpAndSettle();
 
       expect(find.text('Focus & Timer Settings'), findsOneWidget);
+      expect(find.text('Timer Presets'), findsOneWidget);
       expect(find.text('Focus Duration'), findsOneWidget);
       expect(find.text('Short Break Duration'), findsOneWidget);
       expect(find.text('Long Break Duration'), findsOneWidget);
@@ -51,16 +54,7 @@ void main() {
     testWidgets('tapping Custom opens dialog and sets custom duration', (
       tester,
     ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: BlocProvider<SettingsCubit>.value(
-              value: cubit,
-              child: const SettingsSheet(),
-            ),
-          ),
-        ),
-      );
+      await tester.pumpWidget(createWidgetUnderTest());
       await tester.pumpAndSettle();
 
       // Tap first "Custom..." button (for Focus duration)
@@ -85,6 +79,23 @@ void main() {
 
       expect(cubit.state.settings.workDurationMinutes, 38);
       expect(find.text('38 min (Custom)'), findsOneWidget);
+    });
+
+    testWidgets('selecting a preset updates durations', (tester) async {
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pumpAndSettle();
+
+      // Find Deep Work (50/10) chip
+      final deepWorkChip = find.text('Deep Work (50/10)');
+      expect(deepWorkChip, findsOneWidget);
+
+      await tester.tap(deepWorkChip);
+      await tester.pumpAndSettle();
+
+      expect(cubit.state.settings.workDurationMinutes, 50);
+      expect(cubit.state.settings.shortBreakDurationMinutes, 10);
+      expect(cubit.state.settings.longBreakDurationMinutes, 30);
+      expect(cubit.state.settings.activePresetId, 'preset-deep-work');
     });
   });
 }
