@@ -149,8 +149,46 @@ class TasksCubit extends Cubit<TasksState> {
     }
   }
 
+  void setSearchQuery(String query) {
+    emit(state.copyWith(searchQuery: query.trim()));
+  }
+
   void setFilter(TasksFilter filter) {
     emit(state.copyWith(filter: filter));
+  }
+
+  void setPriorityFilter(TaskPriority? priority) {
+    emit(
+      state.copyWith(
+        priorityFilter: priority,
+        clearPriorityFilter: priority == null,
+      ),
+    );
+  }
+
+  void setCategoryFilter(String? category) {
+    emit(
+      state.copyWith(
+        categoryFilter: category,
+        clearCategoryFilter: category == null,
+      ),
+    );
+  }
+
+  void setDueDateFilter(DueDateFilter filter) {
+    emit(state.copyWith(dueDateFilter: filter));
+  }
+
+  void resetFilters() {
+    emit(
+      state.copyWith(
+        searchQuery: '',
+        filter: TasksFilter.all,
+        clearPriorityFilter: true,
+        clearCategoryFilter: true,
+        dueDateFilter: DueDateFilter.all,
+      ),
+    );
   }
 
   @override
