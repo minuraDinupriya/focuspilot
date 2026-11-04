@@ -32,9 +32,9 @@ class FocusReset extends FocusEvent {
 }
 
 class FocusTicked extends FocusEvent {
-  const FocusTicked({required this.durationSeconds});
+  const FocusTicked({this.durationSeconds});
 
-  final int durationSeconds;
+  final int? durationSeconds;
 
   @override
   List<Object?> get props => [durationSeconds];
@@ -69,4 +69,8 @@ class FocusSettingsChanged extends FocusEvent {
 
   @override
   List<Object?> get props => [settings];
+}
+
+class FocusAppForegrounded extends FocusEvent {
+  const FocusAppForegrounded();
 }

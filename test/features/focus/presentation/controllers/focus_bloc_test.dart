@@ -139,5 +139,96 @@ void main() {
       await customBloc.close();
       settingsRepo.dispose();
     });
+
+    test('FocusStarted sets targetEndTime and FocusPaused clears it', () async {
+      var currentTime = DateTime(2026, 11, 4, 10, 0, 0);
+      final testBloc = FocusBloc(
+        ticker: const FakeTicker(stream: Stream.empty()),
+        sessionRepository: repository,
+        now: () => currentTime,
+      );
+
+      testBloc.add(const FocusStarted(durationSeconds: 1500));
+      await pumpEventQueue();
+
+      expect(testBloc.state.isRunning, isTrue);
+      expect(testBloc.state.targetEndTime, DateTime(2026, 11, 4, 10, 25, 0));
+
+      testBloc.add(const FocusPaused());
+      await pumpEventQueue();
+
+      expect(testBloc.state.isPaused, isTrue);
+      expect(testBloc.state.targetEndTime, isNull);
+
+      // Advance time by 5 minutes while paused
+      currentTime = currentTime.add(const Duration(minutes: 5));
+
+      testBloc.add(const FocusResumed());
+      await pumpEventQueue();
+
+      expect(testBloc.state.isRunning, isTrue);
+      // targetEndTime recomputed from current time + remaining seconds (1500)
+      expect(
+        testBloc.state.targetEndTime,
+        currentTime.add(const Duration(seconds: 1500)),
+      );
+
+      await testBloc.close();
+    });
+
+    test(
+      'FocusAppForegrounded reconciles elapsed time while backgrounded',
+      () async {
+        var currentTime = DateTime(2026, 11, 4, 10, 0, 0);
+        final testBloc = FocusBloc(
+          ticker: const FakeTicker(stream: Stream.empty()),
+          sessionRepository: repository,
+          now: () => currentTime,
+        );
+
+        testBloc.add(const FocusStarted(durationSeconds: 1500));
+        await pumpEventQueue();
+
+        expect(testBloc.state.durationSeconds, 1500);
+
+        // Simulate 500 seconds passing in background
+        currentTime = currentTime.add(const Duration(seconds: 500));
+        testBloc.add(const FocusAppForegrounded());
+        await pumpEventQueue();
+
+        expect(testBloc.state.durationSeconds, 1000);
+        expect(testBloc.state.isRunning, isTrue);
+
+        await testBloc.close();
+      },
+    );
+
+    test(
+      'FocusAppForegrounded completes session if timer expired in background',
+      () async {
+        var currentTime = DateTime(2026, 11, 4, 10, 0, 0);
+        final testBloc = FocusBloc(
+          ticker: const FakeTicker(stream: Stream.empty()),
+          sessionRepository: repository,
+          now: () => currentTime,
+        );
+
+        testBloc.add(const FocusStarted(durationSeconds: 300));
+        await pumpEventQueue();
+
+        // Simulate 350 seconds passing in background (exceeds 300s)
+        currentTime = currentTime.add(const Duration(seconds: 350));
+        testBloc.add(const FocusAppForegrounded());
+        await pumpEventQueue();
+
+        expect(testBloc.state.isCompleted, isTrue);
+        expect(testBloc.state.durationSeconds, 0);
+        final sessions = await repository.getSessions();
+        expect(sessions.length, 1);
+        expect(sessions.first.durationSeconds, 300);
+
+        await testBloc.close();
+      },
+    );
   });
 }

@@ -16,8 +16,10 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     required this.ticker,
     required this.sessionRepository,
     this.settingsRepository,
+    DateTime Function()? now,
     FocusState? initialState,
-  }) : super(initialState ?? const FocusState()) {
+  }) : now = now ?? DateTime.now,
+       super(initialState ?? const FocusState()) {
     on<FocusStarted>(_onStarted);
     on<FocusTicked>(_onTicked);
     on<FocusPaused>(_onPaused);
@@ -27,6 +29,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     on<FocusTaskLinked>(_onTaskLinked);
     on<FocusSessionsCountRefreshed>(_onSessionsCountRefreshed);
     on<FocusSettingsChanged>(_onSettingsChanged);
+    on<FocusAppForegrounded>(_onAppForegrounded);
 
     add(const FocusSessionsCountRefreshed());
 
@@ -40,6 +43,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
   final Ticker ticker;
   final FocusSessionRepository sessionRepository;
   final SettingsRepository? settingsRepository;
+  final DateTime Function() now;
   StreamSubscription<int>? _tickerSubscription;
   StreamSubscription<UserSettings>? _settingsSubscription;
   UserSettings _settings = const UserSettings();
@@ -56,11 +60,13 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
   }
 
   void _onStarted(FocusStarted event, Emitter<FocusState> emit) {
+    final target = now().add(Duration(seconds: event.durationSeconds));
     emit(
       state.copyWith(
         status: FocusStatus.running,
         durationSeconds: event.durationSeconds,
         totalDurationSeconds: event.durationSeconds,
+        targetEndTime: target,
       ),
     );
 
@@ -71,51 +77,82 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
   }
 
   Future<void> _onTicked(FocusTicked event, Emitter<FocusState> emit) async {
-    if (event.durationSeconds > 0) {
+    final int remaining;
+    if (state.targetEndTime != null) {
+      final diff = state.targetEndTime!.difference(now()).inSeconds;
+      if (event.durationSeconds != null && event.durationSeconds! <= 0) {
+        remaining = 0;
+      } else {
+        remaining = diff < 0 ? 0 : diff;
+      }
+    } else {
+      remaining = event.durationSeconds ?? (state.durationSeconds - 1);
+    }
+
+    if (remaining > 0) {
       emit(
-        state.copyWith(
-          status: FocusStatus.running,
-          durationSeconds: event.durationSeconds,
-        ),
+        state.copyWith(status: FocusStatus.running, durationSeconds: remaining),
       );
     } else {
-      await _tickerSubscription?.cancel();
-
-      try {
-        final session = FocusSession.create(
-          mode: state.mode,
-          durationSeconds: state.totalDurationSeconds,
-          taskId: state.linkedTask?.id,
-        );
-        await sessionRepository.saveSession(session);
-        HapticFeedback.vibrate();
-      } catch (_) {
-        // Continue even if logging fails
-      }
-
-      final count = await sessionRepository.getCompletedSessionsCountToday();
-
-      emit(
-        state.copyWith(
-          status: FocusStatus.completed,
-          durationSeconds: 0,
-          sessionsCompletedToday: count,
-        ),
-      );
+      await _completeSession(emit);
     }
+  }
+
+  Future<void> _onAppForegrounded(
+    FocusAppForegrounded event,
+    Emitter<FocusState> emit,
+  ) async {
+    if (!state.isRunning || state.targetEndTime == null) return;
+
+    final remaining = state.targetEndTime!.difference(now()).inSeconds;
+    if (remaining <= 0) {
+      await _completeSession(emit);
+    } else {
+      emit(state.copyWith(durationSeconds: remaining));
+    }
+  }
+
+  Future<void> _completeSession(Emitter<FocusState> emit) async {
+    await _tickerSubscription?.cancel();
+
+    try {
+      final session = FocusSession.create(
+        mode: state.mode,
+        durationSeconds: state.totalDurationSeconds,
+        taskId: state.linkedTask?.id,
+      );
+      await sessionRepository.saveSession(session);
+      HapticFeedback.vibrate();
+    } catch (_) {
+      // Continue even if logging fails
+    }
+
+    final count = await sessionRepository.getCompletedSessionsCountToday();
+
+    emit(
+      state.copyWith(
+        status: FocusStatus.completed,
+        durationSeconds: 0,
+        clearTargetEndTime: true,
+        sessionsCompletedToday: count,
+      ),
+    );
   }
 
   void _onPaused(FocusPaused event, Emitter<FocusState> emit) {
     if (state.isRunning) {
       _tickerSubscription?.pause();
-      emit(state.copyWith(status: FocusStatus.paused));
+      emit(
+        state.copyWith(status: FocusStatus.paused, clearTargetEndTime: true),
+      );
     }
   }
 
   void _onResumed(FocusResumed event, Emitter<FocusState> emit) {
     if (state.isPaused) {
+      final target = now().add(Duration(seconds: state.durationSeconds));
       _tickerSubscription?.resume();
-      emit(state.copyWith(status: FocusStatus.running));
+      emit(state.copyWith(status: FocusStatus.running, targetEndTime: target));
     }
   }
 
@@ -127,6 +164,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
         status: FocusStatus.initial,
         durationSeconds: duration,
         totalDurationSeconds: duration,
+        clearTargetEndTime: true,
       ),
     );
   }
@@ -140,6 +178,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
         mode: event.mode,
         durationSeconds: duration,
         totalDurationSeconds: duration,
+        clearTargetEndTime: true,
       ),
     );
   }
