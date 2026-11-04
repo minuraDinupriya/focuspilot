@@ -17,6 +17,86 @@ class SettingsSheet extends StatelessWidget {
     );
   }
 
+  void _showNewPresetDialog(BuildContext context) {
+    final nameController = TextEditingController();
+    final workController = TextEditingController(text: '30');
+    final shortBreakController = TextEditingController(text: '5');
+    final longBreakController = TextEditingController(text: '15');
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Create Timer Preset'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Preset Name',
+                  hintText: 'e.g., Code Review, Exam Prep',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: workController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Focus Duration (min)',
+                  suffixText: 'min',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: shortBreakController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Short Break (min)',
+                  suffixText: 'min',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: longBreakController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Long Break (min)',
+                  suffixText: 'min',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final name = nameController.text.trim();
+              final work = int.tryParse(workController.text) ?? 25;
+              final shortBreak = int.tryParse(shortBreakController.text) ?? 5;
+              final longBreak = int.tryParse(longBreakController.text) ?? 15;
+
+              if (name.isNotEmpty) {
+                context.read<SettingsCubit>().createPreset(
+                  name: name,
+                  workDurationMinutes: work.clamp(1, 180),
+                  shortBreakDurationMinutes: shortBreak.clamp(1, 60),
+                  longBreakDurationMinutes: longBreak.clamp(1, 90),
+                );
+                Navigator.pop(dialogCtx);
+              }
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -24,6 +104,7 @@ class SettingsSheet extends StatelessWidget {
     return BlocBuilder<SettingsCubit, SettingsState>(
       builder: (context, state) {
         final settings = state.settings;
+        final presets = state.presets;
 
         return SingleChildScrollView(
           padding: EdgeInsets.only(
@@ -62,7 +143,46 @@ class SettingsSheet extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+
+              // Timer Presets Section
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Timer Presets',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  TextButton.icon(
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('New Preset'),
+                    onPressed: () => _showNewPresetDialog(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (presets.isNotEmpty)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: presets.map((preset) {
+                    final isSelected = settings.activePresetId == preset.id;
+                    return ChoiceChip(
+                      label: Text(
+                        '${preset.name} (${preset.workDurationMinutes}/${preset.shortBreakDurationMinutes})',
+                      ),
+                      selected: isSelected,
+                      onSelected: (_) {
+                        context.read<SettingsCubit>().selectPreset(preset);
+                      },
+                    );
+                  }).toList(),
+                ),
+              const SizedBox(height: 24),
+              const Divider(),
+              const SizedBox(height: 16),
 
               // Work / Focus Duration
               _DurationSelector(
@@ -75,7 +195,10 @@ class SettingsSheet extends StatelessWidget {
                 maxVal: 180,
                 onSelected: (val) {
                   context.read<SettingsCubit>().updateSettings(
-                    settings.copyWith(workDurationMinutes: val),
+                    settings.copyWith(
+                      workDurationMinutes: val,
+                      clearActivePresetId: true,
+                    ),
                   );
                 },
               ),
@@ -92,7 +215,10 @@ class SettingsSheet extends StatelessWidget {
                 maxVal: 60,
                 onSelected: (val) {
                   context.read<SettingsCubit>().updateSettings(
-                    settings.copyWith(shortBreakDurationMinutes: val),
+                    settings.copyWith(
+                      shortBreakDurationMinutes: val,
+                      clearActivePresetId: true,
+                    ),
                   );
                 },
               ),
@@ -109,7 +235,10 @@ class SettingsSheet extends StatelessWidget {
                 maxVal: 90,
                 onSelected: (val) {
                   context.read<SettingsCubit>().updateSettings(
-                    settings.copyWith(longBreakDurationMinutes: val),
+                    settings.copyWith(
+                      longBreakDurationMinutes: val,
+                      clearActivePresetId: true,
+                    ),
                   );
                 },
               ),

@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focuspilot/features/settings/data/repositories/sqlite_settings_repository.dart';
+import 'package:focuspilot/features/settings/domain/models/timer_preset.dart';
 import 'package:focuspilot/features/settings/domain/models/user_settings.dart';
 import 'package:focuspilot/features/tasks/data/datasources/database/app_database.dart';
 
@@ -71,5 +72,28 @@ void main() {
         await expectation;
       },
     );
+
+    test('getPresets returns default presets on fresh database', () async {
+      final presets = await repository.getPresets();
+
+      expect(presets.length, greaterThanOrEqualTo(3));
+      expect(presets.any((p) => p.name == 'Classic Pomodoro'), isTrue);
+      expect(presets.any((p) => p.name == 'Deep Work'), isTrue);
+      expect(presets.any((p) => p.name == 'Quick Sprint'), isTrue);
+    });
+
+    test('savePreset persists custom preset', () async {
+      final customPreset = TimerPreset.create(
+        name: 'Coding Sprint',
+        workDurationMinutes: 40,
+        shortBreakDurationMinutes: 8,
+        longBreakDurationMinutes: 20,
+      );
+
+      await repository.savePreset(customPreset);
+
+      final presets = await repository.getPresets();
+      expect(presets.any((p) => p.name == 'Coding Sprint'), isTrue);
+    });
   });
 }
