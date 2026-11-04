@@ -163,6 +163,13 @@ class TaskRepositoryImpl implements TaskRepository {
       clearCompletedAt: !updatedIsCompleted,
     );
     await saveTask(updated);
+
+    if (updatedIsCompleted && task.isRecurring) {
+      final nextInstance = task.createNextRecurringInstance();
+      if (nextInstance != null) {
+        await saveTask(nextInstance);
+      }
+    }
   }
 
   @override

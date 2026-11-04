@@ -48,7 +48,13 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
     'Reading',
   ];
   static const _estimatedOptions = [15, 25, 45, 60, 90];
-  static const _recurrenceOptions = ['none', 'daily', 'weekly', 'weekdays'];
+  static const _recurrenceOptions = [
+    'none',
+    'daily',
+    'weekdays',
+    'weekly',
+    'monthly',
+  ];
 
   @override
   void initState() {

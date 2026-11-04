@@ -59,12 +59,20 @@ class FakeTaskRepository implements TaskRepository {
   Future<void> toggleTaskCompletion(String id) async {
     final task = await getTaskById(id);
     if (task != null) {
+      final updatedIsCompleted = !task.isCompleted;
       final updated = task.copyWith(
-        isCompleted: !task.isCompleted,
-        completedAt: !task.isCompleted ? DateTime.now() : null,
-        clearCompletedAt: task.isCompleted,
+        isCompleted: updatedIsCompleted,
+        completedAt: updatedIsCompleted ? DateTime.now() : null,
+        clearCompletedAt: !updatedIsCompleted,
       );
       await saveTask(updated);
+
+      if (updatedIsCompleted && task.isRecurring) {
+        final nextInstance = task.createNextRecurringInstance();
+        if (nextInstance != null) {
+          await saveTask(nextInstance);
+        }
+      }
     }
   }
 

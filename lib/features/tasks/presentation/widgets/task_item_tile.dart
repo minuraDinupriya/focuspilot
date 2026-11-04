@@ -92,7 +92,8 @@ class TaskItemTile extends StatelessWidget {
                       if (task.category != null ||
                           task.subtasks.isNotEmpty ||
                           task.dueDate != null ||
-                          task.estimatedMinutes != null) ...[
+                          task.estimatedMinutes != null ||
+                          task.isRecurring) ...[
                         const SizedBox(height: 6),
                         Wrap(
                           spacing: 6,
@@ -115,6 +116,38 @@ class TaskItemTile extends StatelessWidget {
                                         theme.colorScheme.onSecondaryContainer,
                                     fontWeight: FontWeight.w600,
                                   ),
+                                ),
+                              ),
+                            if (task.isRecurring)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color:
+                                      theme.colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.repeat,
+                                      size: 12,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      task.recurrenceType.displayName,
+                                      style: theme.textTheme.labelSmall
+                                          ?.copyWith(
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             if (task.subtasks.isNotEmpty)
