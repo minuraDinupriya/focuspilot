@@ -2,7 +2,7 @@
 
 [![Flutter CI](https://github.com/minuraDinupriya/focuspilot/actions/workflows/flutter_ci.yml/badge.svg)](https://github.com/minuraDinupriya/focuspilot/actions/workflows/flutter_ci.yml)
 [![Flutter CD](https://github.com/minuraDinupriya/focuspilot/actions/workflows/flutter_cd.yml/badge.svg)](https://github.com/minuraDinupriya/focuspilot/actions/workflows/flutter_cd.yml)
-[![Latest Release](https://img.shields.io/github/v/release/minuraDinupriya/focuspilot?color=2E7D32&label=Release&logo=github)](https://github.com/minuraDinupriya/focuspilot/releases)
+[![Latest Release](https://img.shields.io/badge/Release-v1.0.0-2E7D32?logo=github)](https://github.com/minuraDinupriya/focuspilot/releases)
 [![Flutter](https://img.shields.io/badge/Flutter-3.47.9-02569B?logo=flutter)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.13.7-0175C2?logo=dart)](https://dart.dev)
 [![Architecture](https://img.shields.io/badge/Architecture-Feature--First%20Clean%20Architecture-blueviolet)]()
