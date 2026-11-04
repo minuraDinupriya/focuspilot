@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:focuspilot/features/tasks/domain/models/task_priority.dart';
 import 'package:focuspilot/features/tasks/presentation/controllers/tasks_cubit.dart';
 import 'package:focuspilot/features/tasks/presentation/controllers/tasks_state.dart';
-import 'package:focuspilot/features/tasks/presentation/widgets/add_task_bottom_sheet.dart';
+import 'package:focuspilot/features/tasks/presentation/widgets/task_detail_sheet.dart';
 import 'package:focuspilot/features/tasks/presentation/widgets/task_filter_bar.dart';
 import 'package:focuspilot/features/tasks/presentation/widgets/task_item_tile.dart';
 
@@ -109,6 +108,8 @@ class TasksScreen extends StatelessWidget {
                           final task = state.filteredTasks[index];
                           return TaskItemTile(
                             task: task,
+                            onTap: () =>
+                                TaskDetailSheet.show(context, task: task),
                             onToggle: (_) {
                               context.read<TasksCubit>().toggleTask(task.id);
                             },
@@ -130,23 +131,7 @@ class TasksScreen extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          AddTaskBottomSheet.show(
-            context,
-            onSubmit:
-                ({
-                  required String title,
-                  String? description,
-                  required TaskPriority priority,
-                }) {
-                  context.read<TasksCubit>().addTask(
-                    title: title,
-                    description: description,
-                    priority: priority,
-                  );
-                },
-          );
-        },
+        onPressed: () => TaskDetailSheet.show(context),
         icon: const Icon(Icons.add),
         label: const Text('Add Task'),
       ),

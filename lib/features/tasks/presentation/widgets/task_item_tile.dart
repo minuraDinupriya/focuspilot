@@ -8,11 +8,13 @@ class TaskItemTile extends StatelessWidget {
     required this.task,
     required this.onToggle,
     required this.onDelete,
+    this.onTap,
   });
 
   final Task task;
   final ValueChanged<bool?> onToggle;
   final VoidCallback onDelete;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -43,59 +45,172 @@ class TaskItemTile extends StatelessWidget {
             color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
           ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Checkbox(
-                value: task.isCompleted,
-                onChanged: onToggle,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Checkbox(
+                  value: task.isCompleted,
+                  onChanged: onToggle,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      task.title,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        decoration: task.isCompleted
-                            ? TextDecoration.lineThrough
-                            : TextDecoration.none,
-                        color: task.isCompleted
-                            ? theme.colorScheme.outline
-                            : theme.colorScheme.onSurface,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    if (task.description != null &&
-                        task.description!.isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        task.description!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.outline,
+                        task.title,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          decoration: task.isCompleted
+                              ? TextDecoration.lineThrough
+                              : TextDecoration.none,
+                          color: task.isCompleted
+                              ? theme.colorScheme.outline
+                              : theme.colorScheme.onSurface,
+                          fontWeight: FontWeight.w500,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
+                      if (task.description != null &&
+                          task.description!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          task.description!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.outline,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                      if (task.category != null ||
+                          task.subtasks.isNotEmpty ||
+                          task.dueDate != null ||
+                          task.estimatedMinutes != null) ...[
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            if (task.category != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.secondaryContainer,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  task.category!,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color:
+                                        theme.colorScheme.onSecondaryContainer,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            if (task.subtasks.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color:
+                                      theme.colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.checklist,
+                                      size: 12,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      '${task.completedSubtasksCount}/${task.subtasks.length}',
+                                      style: theme.textTheme.labelSmall
+                                          ?.copyWith(
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            if (task.dueDate != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: task.isOverdue
+                                      ? theme.colorScheme.errorContainer
+                                      : theme
+                                            .colorScheme
+                                            .surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  task.isOverdue
+                                      ? 'Overdue'
+                                      : '${task.dueDate!.month}/${task.dueDate!.day}',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: task.isOverdue
+                                        ? theme.colorScheme.onErrorContainer
+                                        : theme.colorScheme.onSurfaceVariant,
+                                    fontWeight: task.isOverdue
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                                ),
+                              ),
+                            if (task.estimatedMinutes != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color:
+                                      theme.colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  '⏱️ ${task.estimatedMinutes}m',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              TaskPriorityChip(priority: task.priority),
-              IconButton(
-                icon: const Icon(Icons.delete_outline, size: 20),
-                color: theme.colorScheme.outline,
-                onPressed: onDelete,
-                tooltip: 'Delete task',
-              ),
-            ],
+                const SizedBox(width: 8),
+                TaskPriorityChip(priority: task.priority),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                  color: theme.colorScheme.outline,
+                  onPressed: onDelete,
+                  tooltip: 'Delete task',
+                ),
+              ],
+            ),
           ),
         ),
       ),
