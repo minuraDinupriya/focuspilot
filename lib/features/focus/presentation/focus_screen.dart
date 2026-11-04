@@ -9,8 +9,32 @@ import 'package:focuspilot/features/focus/presentation/widgets/focus_mode_select
 import 'package:focuspilot/features/focus/presentation/widgets/focus_task_selector.dart';
 import 'package:focuspilot/features/focus/presentation/widgets/timer_controls.dart';
 
-class FocusScreen extends StatelessWidget {
+class FocusScreen extends StatefulWidget {
   const FocusScreen({super.key});
+
+  @override
+  State<FocusScreen> createState() => _FocusScreenState();
+}
+
+class _FocusScreenState extends State<FocusScreen> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      context.read<FocusBloc>().add(const FocusAppForegrounded());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
