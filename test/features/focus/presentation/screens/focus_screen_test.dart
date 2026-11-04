@@ -122,5 +122,31 @@ void main() {
 
       expect(find.text('Pause'), findsOneWidget);
     });
+
+    testWidgets('displays distraction counter button during running session', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final bloc = FocusBloc(
+        ticker: const TestTicker(),
+        sessionRepository: focusRepository,
+        initialState: const FocusState(
+          status: FocusStatus.running,
+          durationSeconds: 25 * 60,
+          totalDurationSeconds: 25 * 60,
+          distractionCount: 3,
+        ),
+      );
+      addTearDown(bloc.close);
+
+      await tester.pumpWidget(createWidgetUnderTest(bloc));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Distractions: 3 (+1)'), findsOneWidget);
+    });
   });
 }

@@ -74,3 +74,11 @@ class FocusSettingsChanged extends FocusEvent {
 class FocusAppForegrounded extends FocusEvent {
   const FocusAppForegrounded();
 }
+
+class FocusDistractionRecorded extends FocusEvent {
+  const FocusDistractionRecorded();
+}
+
+class FocusSkipped extends FocusEvent {
+  const FocusSkipped();
+}

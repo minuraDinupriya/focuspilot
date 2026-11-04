@@ -589,6 +589,28 @@ class $FocusSessionEntriesTable extends FocusSessionEntries
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _distractionCountMeta = const VerificationMeta(
+    'distractionCount',
+  );
+  @override
+  late final GeneratedColumn<int> distractionCount = GeneratedColumn<int>(
+    'distraction_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('completed'),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -596,6 +618,8 @@ class $FocusSessionEntriesTable extends FocusSessionEntries
     durationSeconds,
     completedAt,
     taskId,
+    distractionCount,
+    status,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -650,6 +674,21 @@ class $FocusSessionEntriesTable extends FocusSessionEntries
         taskId.isAcceptableOrUnknown(data['task_id']!, _taskIdMeta),
       );
     }
+    if (data.containsKey('distraction_count')) {
+      context.handle(
+        _distractionCountMeta,
+        distractionCount.isAcceptableOrUnknown(
+          data['distraction_count']!,
+          _distractionCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
     return context;
   }
 
@@ -679,6 +718,14 @@ class $FocusSessionEntriesTable extends FocusSessionEntries
         DriftSqlType.string,
         data['${effectivePrefix}task_id'],
       ),
+      distractionCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}distraction_count'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
     );
   }
 
@@ -695,12 +742,16 @@ class FocusSessionEntry extends DataClass
   final int durationSeconds;
   final DateTime completedAt;
   final String? taskId;
+  final int distractionCount;
+  final String status;
   const FocusSessionEntry({
     required this.id,
     required this.mode,
     required this.durationSeconds,
     required this.completedAt,
     this.taskId,
+    required this.distractionCount,
+    required this.status,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -712,6 +763,8 @@ class FocusSessionEntry extends DataClass
     if (!nullToAbsent || taskId != null) {
       map['task_id'] = Variable<String>(taskId);
     }
+    map['distraction_count'] = Variable<int>(distractionCount);
+    map['status'] = Variable<String>(status);
     return map;
   }
 
@@ -724,6 +777,8 @@ class FocusSessionEntry extends DataClass
       taskId: taskId == null && nullToAbsent
           ? const Value.absent()
           : Value(taskId),
+      distractionCount: Value(distractionCount),
+      status: Value(status),
     );
   }
 
@@ -738,6 +793,8 @@ class FocusSessionEntry extends DataClass
       durationSeconds: serializer.fromJson<int>(json['durationSeconds']),
       completedAt: serializer.fromJson<DateTime>(json['completedAt']),
       taskId: serializer.fromJson<String?>(json['taskId']),
+      distractionCount: serializer.fromJson<int>(json['distractionCount']),
+      status: serializer.fromJson<String>(json['status']),
     );
   }
   @override
@@ -749,6 +806,8 @@ class FocusSessionEntry extends DataClass
       'durationSeconds': serializer.toJson<int>(durationSeconds),
       'completedAt': serializer.toJson<DateTime>(completedAt),
       'taskId': serializer.toJson<String?>(taskId),
+      'distractionCount': serializer.toJson<int>(distractionCount),
+      'status': serializer.toJson<String>(status),
     };
   }
 
@@ -758,12 +817,16 @@ class FocusSessionEntry extends DataClass
     int? durationSeconds,
     DateTime? completedAt,
     Value<String?> taskId = const Value.absent(),
+    int? distractionCount,
+    String? status,
   }) => FocusSessionEntry(
     id: id ?? this.id,
     mode: mode ?? this.mode,
     durationSeconds: durationSeconds ?? this.durationSeconds,
     completedAt: completedAt ?? this.completedAt,
     taskId: taskId.present ? taskId.value : this.taskId,
+    distractionCount: distractionCount ?? this.distractionCount,
+    status: status ?? this.status,
   );
   FocusSessionEntry copyWithCompanion(FocusSessionEntriesCompanion data) {
     return FocusSessionEntry(
@@ -776,6 +839,10 @@ class FocusSessionEntry extends DataClass
           ? data.completedAt.value
           : this.completedAt,
       taskId: data.taskId.present ? data.taskId.value : this.taskId,
+      distractionCount: data.distractionCount.present
+          ? data.distractionCount.value
+          : this.distractionCount,
+      status: data.status.present ? data.status.value : this.status,
     );
   }
 
@@ -786,14 +853,23 @@ class FocusSessionEntry extends DataClass
           ..write('mode: $mode, ')
           ..write('durationSeconds: $durationSeconds, ')
           ..write('completedAt: $completedAt, ')
-          ..write('taskId: $taskId')
+          ..write('taskId: $taskId, ')
+          ..write('distractionCount: $distractionCount, ')
+          ..write('status: $status')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, mode, durationSeconds, completedAt, taskId);
+  int get hashCode => Object.hash(
+    id,
+    mode,
+    durationSeconds,
+    completedAt,
+    taskId,
+    distractionCount,
+    status,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -802,7 +878,9 @@ class FocusSessionEntry extends DataClass
           other.mode == this.mode &&
           other.durationSeconds == this.durationSeconds &&
           other.completedAt == this.completedAt &&
-          other.taskId == this.taskId);
+          other.taskId == this.taskId &&
+          other.distractionCount == this.distractionCount &&
+          other.status == this.status);
 }
 
 class FocusSessionEntriesCompanion extends UpdateCompanion<FocusSessionEntry> {
@@ -811,6 +889,8 @@ class FocusSessionEntriesCompanion extends UpdateCompanion<FocusSessionEntry> {
   final Value<int> durationSeconds;
   final Value<DateTime> completedAt;
   final Value<String?> taskId;
+  final Value<int> distractionCount;
+  final Value<String> status;
   final Value<int> rowid;
   const FocusSessionEntriesCompanion({
     this.id = const Value.absent(),
@@ -818,6 +898,8 @@ class FocusSessionEntriesCompanion extends UpdateCompanion<FocusSessionEntry> {
     this.durationSeconds = const Value.absent(),
     this.completedAt = const Value.absent(),
     this.taskId = const Value.absent(),
+    this.distractionCount = const Value.absent(),
+    this.status = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   FocusSessionEntriesCompanion.insert({
@@ -826,6 +908,8 @@ class FocusSessionEntriesCompanion extends UpdateCompanion<FocusSessionEntry> {
     required int durationSeconds,
     required DateTime completedAt,
     this.taskId = const Value.absent(),
+    this.distractionCount = const Value.absent(),
+    this.status = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        mode = Value(mode),
@@ -837,6 +921,8 @@ class FocusSessionEntriesCompanion extends UpdateCompanion<FocusSessionEntry> {
     Expression<int>? durationSeconds,
     Expression<DateTime>? completedAt,
     Expression<String>? taskId,
+    Expression<int>? distractionCount,
+    Expression<String>? status,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -845,6 +931,8 @@ class FocusSessionEntriesCompanion extends UpdateCompanion<FocusSessionEntry> {
       if (durationSeconds != null) 'duration_seconds': durationSeconds,
       if (completedAt != null) 'completed_at': completedAt,
       if (taskId != null) 'task_id': taskId,
+      if (distractionCount != null) 'distraction_count': distractionCount,
+      if (status != null) 'status': status,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -855,6 +943,8 @@ class FocusSessionEntriesCompanion extends UpdateCompanion<FocusSessionEntry> {
     Value<int>? durationSeconds,
     Value<DateTime>? completedAt,
     Value<String?>? taskId,
+    Value<int>? distractionCount,
+    Value<String>? status,
     Value<int>? rowid,
   }) {
     return FocusSessionEntriesCompanion(
@@ -863,6 +953,8 @@ class FocusSessionEntriesCompanion extends UpdateCompanion<FocusSessionEntry> {
       durationSeconds: durationSeconds ?? this.durationSeconds,
       completedAt: completedAt ?? this.completedAt,
       taskId: taskId ?? this.taskId,
+      distractionCount: distractionCount ?? this.distractionCount,
+      status: status ?? this.status,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -885,6 +977,12 @@ class FocusSessionEntriesCompanion extends UpdateCompanion<FocusSessionEntry> {
     if (taskId.present) {
       map['task_id'] = Variable<String>(taskId.value);
     }
+    if (distractionCount.present) {
+      map['distraction_count'] = Variable<int>(distractionCount.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -899,6 +997,8 @@ class FocusSessionEntriesCompanion extends UpdateCompanion<FocusSessionEntry> {
           ..write('durationSeconds: $durationSeconds, ')
           ..write('completedAt: $completedAt, ')
           ..write('taskId: $taskId, ')
+          ..write('distractionCount: $distractionCount, ')
+          ..write('status: $status, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -979,6 +1079,50 @@ class $UserSettingsEntriesTable extends UserSettingsEntries
     requiredDuringInsert: false,
     defaultValue: const Constant('preset-classic'),
   );
+  static const VerificationMeta _autoStartNextSessionMeta =
+      const VerificationMeta('autoStartNextSession');
+  @override
+  late final GeneratedColumn<bool> autoStartNextSession = GeneratedColumn<bool>(
+    'auto_start_next_session',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("auto_start_next_session" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _soundEnabledMeta = const VerificationMeta(
+    'soundEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> soundEnabled = GeneratedColumn<bool>(
+    'sound_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("sound_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _hapticEnabledMeta = const VerificationMeta(
+    'hapticEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> hapticEnabled = GeneratedColumn<bool>(
+    'haptic_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("haptic_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -987,6 +1131,9 @@ class $UserSettingsEntriesTable extends UserSettingsEntries
     longBreakDurationMinutes,
     dailyGoalMinutes,
     activePresetId,
+    autoStartNextSession,
+    soundEnabled,
+    hapticEnabled,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1050,6 +1197,33 @@ class $UserSettingsEntriesTable extends UserSettingsEntries
         ),
       );
     }
+    if (data.containsKey('auto_start_next_session')) {
+      context.handle(
+        _autoStartNextSessionMeta,
+        autoStartNextSession.isAcceptableOrUnknown(
+          data['auto_start_next_session']!,
+          _autoStartNextSessionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('sound_enabled')) {
+      context.handle(
+        _soundEnabledMeta,
+        soundEnabled.isAcceptableOrUnknown(
+          data['sound_enabled']!,
+          _soundEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('haptic_enabled')) {
+      context.handle(
+        _hapticEnabledMeta,
+        hapticEnabled.isAcceptableOrUnknown(
+          data['haptic_enabled']!,
+          _hapticEnabledMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1083,6 +1257,18 @@ class $UserSettingsEntriesTable extends UserSettingsEntries
         DriftSqlType.string,
         data['${effectivePrefix}active_preset_id'],
       ),
+      autoStartNextSession: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}auto_start_next_session'],
+      )!,
+      soundEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}sound_enabled'],
+      )!,
+      hapticEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}haptic_enabled'],
+      )!,
     );
   }
 
@@ -1100,6 +1286,9 @@ class UserSettingsEntry extends DataClass
   final int longBreakDurationMinutes;
   final int dailyGoalMinutes;
   final String? activePresetId;
+  final bool autoStartNextSession;
+  final bool soundEnabled;
+  final bool hapticEnabled;
   const UserSettingsEntry({
     required this.id,
     required this.workDurationMinutes,
@@ -1107,6 +1296,9 @@ class UserSettingsEntry extends DataClass
     required this.longBreakDurationMinutes,
     required this.dailyGoalMinutes,
     this.activePresetId,
+    required this.autoStartNextSession,
+    required this.soundEnabled,
+    required this.hapticEnabled,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1123,6 +1315,9 @@ class UserSettingsEntry extends DataClass
     if (!nullToAbsent || activePresetId != null) {
       map['active_preset_id'] = Variable<String>(activePresetId);
     }
+    map['auto_start_next_session'] = Variable<bool>(autoStartNextSession);
+    map['sound_enabled'] = Variable<bool>(soundEnabled);
+    map['haptic_enabled'] = Variable<bool>(hapticEnabled);
     return map;
   }
 
@@ -1136,6 +1331,9 @@ class UserSettingsEntry extends DataClass
       activePresetId: activePresetId == null && nullToAbsent
           ? const Value.absent()
           : Value(activePresetId),
+      autoStartNextSession: Value(autoStartNextSession),
+      soundEnabled: Value(soundEnabled),
+      hapticEnabled: Value(hapticEnabled),
     );
   }
 
@@ -1157,6 +1355,11 @@ class UserSettingsEntry extends DataClass
       ),
       dailyGoalMinutes: serializer.fromJson<int>(json['dailyGoalMinutes']),
       activePresetId: serializer.fromJson<String?>(json['activePresetId']),
+      autoStartNextSession: serializer.fromJson<bool>(
+        json['autoStartNextSession'],
+      ),
+      soundEnabled: serializer.fromJson<bool>(json['soundEnabled']),
+      hapticEnabled: serializer.fromJson<bool>(json['hapticEnabled']),
     );
   }
   @override
@@ -1173,6 +1376,9 @@ class UserSettingsEntry extends DataClass
       ),
       'dailyGoalMinutes': serializer.toJson<int>(dailyGoalMinutes),
       'activePresetId': serializer.toJson<String?>(activePresetId),
+      'autoStartNextSession': serializer.toJson<bool>(autoStartNextSession),
+      'soundEnabled': serializer.toJson<bool>(soundEnabled),
+      'hapticEnabled': serializer.toJson<bool>(hapticEnabled),
     };
   }
 
@@ -1183,6 +1389,9 @@ class UserSettingsEntry extends DataClass
     int? longBreakDurationMinutes,
     int? dailyGoalMinutes,
     Value<String?> activePresetId = const Value.absent(),
+    bool? autoStartNextSession,
+    bool? soundEnabled,
+    bool? hapticEnabled,
   }) => UserSettingsEntry(
     id: id ?? this.id,
     workDurationMinutes: workDurationMinutes ?? this.workDurationMinutes,
@@ -1194,6 +1403,9 @@ class UserSettingsEntry extends DataClass
     activePresetId: activePresetId.present
         ? activePresetId.value
         : this.activePresetId,
+    autoStartNextSession: autoStartNextSession ?? this.autoStartNextSession,
+    soundEnabled: soundEnabled ?? this.soundEnabled,
+    hapticEnabled: hapticEnabled ?? this.hapticEnabled,
   );
   UserSettingsEntry copyWithCompanion(UserSettingsEntriesCompanion data) {
     return UserSettingsEntry(
@@ -1213,6 +1425,15 @@ class UserSettingsEntry extends DataClass
       activePresetId: data.activePresetId.present
           ? data.activePresetId.value
           : this.activePresetId,
+      autoStartNextSession: data.autoStartNextSession.present
+          ? data.autoStartNextSession.value
+          : this.autoStartNextSession,
+      soundEnabled: data.soundEnabled.present
+          ? data.soundEnabled.value
+          : this.soundEnabled,
+      hapticEnabled: data.hapticEnabled.present
+          ? data.hapticEnabled.value
+          : this.hapticEnabled,
     );
   }
 
@@ -1224,7 +1445,10 @@ class UserSettingsEntry extends DataClass
           ..write('shortBreakDurationMinutes: $shortBreakDurationMinutes, ')
           ..write('longBreakDurationMinutes: $longBreakDurationMinutes, ')
           ..write('dailyGoalMinutes: $dailyGoalMinutes, ')
-          ..write('activePresetId: $activePresetId')
+          ..write('activePresetId: $activePresetId, ')
+          ..write('autoStartNextSession: $autoStartNextSession, ')
+          ..write('soundEnabled: $soundEnabled, ')
+          ..write('hapticEnabled: $hapticEnabled')
           ..write(')'))
         .toString();
   }
@@ -1237,6 +1461,9 @@ class UserSettingsEntry extends DataClass
     longBreakDurationMinutes,
     dailyGoalMinutes,
     activePresetId,
+    autoStartNextSession,
+    soundEnabled,
+    hapticEnabled,
   );
   @override
   bool operator ==(Object other) =>
@@ -1247,7 +1474,10 @@ class UserSettingsEntry extends DataClass
           other.shortBreakDurationMinutes == this.shortBreakDurationMinutes &&
           other.longBreakDurationMinutes == this.longBreakDurationMinutes &&
           other.dailyGoalMinutes == this.dailyGoalMinutes &&
-          other.activePresetId == this.activePresetId);
+          other.activePresetId == this.activePresetId &&
+          other.autoStartNextSession == this.autoStartNextSession &&
+          other.soundEnabled == this.soundEnabled &&
+          other.hapticEnabled == this.hapticEnabled);
 }
 
 class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
@@ -1257,6 +1487,9 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
   final Value<int> longBreakDurationMinutes;
   final Value<int> dailyGoalMinutes;
   final Value<String?> activePresetId;
+  final Value<bool> autoStartNextSession;
+  final Value<bool> soundEnabled;
+  final Value<bool> hapticEnabled;
   final Value<int> rowid;
   const UserSettingsEntriesCompanion({
     this.id = const Value.absent(),
@@ -1265,6 +1498,9 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
     this.longBreakDurationMinutes = const Value.absent(),
     this.dailyGoalMinutes = const Value.absent(),
     this.activePresetId = const Value.absent(),
+    this.autoStartNextSession = const Value.absent(),
+    this.soundEnabled = const Value.absent(),
+    this.hapticEnabled = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   UserSettingsEntriesCompanion.insert({
@@ -1274,6 +1510,9 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
     this.longBreakDurationMinutes = const Value.absent(),
     this.dailyGoalMinutes = const Value.absent(),
     this.activePresetId = const Value.absent(),
+    this.autoStartNextSession = const Value.absent(),
+    this.soundEnabled = const Value.absent(),
+    this.hapticEnabled = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id);
   static Insertable<UserSettingsEntry> custom({
@@ -1283,6 +1522,9 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
     Expression<int>? longBreakDurationMinutes,
     Expression<int>? dailyGoalMinutes,
     Expression<String>? activePresetId,
+    Expression<bool>? autoStartNextSession,
+    Expression<bool>? soundEnabled,
+    Expression<bool>? hapticEnabled,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1295,6 +1537,10 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
         'long_break_duration_minutes': longBreakDurationMinutes,
       if (dailyGoalMinutes != null) 'daily_goal_minutes': dailyGoalMinutes,
       if (activePresetId != null) 'active_preset_id': activePresetId,
+      if (autoStartNextSession != null)
+        'auto_start_next_session': autoStartNextSession,
+      if (soundEnabled != null) 'sound_enabled': soundEnabled,
+      if (hapticEnabled != null) 'haptic_enabled': hapticEnabled,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1306,6 +1552,9 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
     Value<int>? longBreakDurationMinutes,
     Value<int>? dailyGoalMinutes,
     Value<String?>? activePresetId,
+    Value<bool>? autoStartNextSession,
+    Value<bool>? soundEnabled,
+    Value<bool>? hapticEnabled,
     Value<int>? rowid,
   }) {
     return UserSettingsEntriesCompanion(
@@ -1317,6 +1566,9 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
           longBreakDurationMinutes ?? this.longBreakDurationMinutes,
       dailyGoalMinutes: dailyGoalMinutes ?? this.dailyGoalMinutes,
       activePresetId: activePresetId ?? this.activePresetId,
+      autoStartNextSession: autoStartNextSession ?? this.autoStartNextSession,
+      soundEnabled: soundEnabled ?? this.soundEnabled,
+      hapticEnabled: hapticEnabled ?? this.hapticEnabled,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1346,6 +1598,17 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
     if (activePresetId.present) {
       map['active_preset_id'] = Variable<String>(activePresetId.value);
     }
+    if (autoStartNextSession.present) {
+      map['auto_start_next_session'] = Variable<bool>(
+        autoStartNextSession.value,
+      );
+    }
+    if (soundEnabled.present) {
+      map['sound_enabled'] = Variable<bool>(soundEnabled.value);
+    }
+    if (hapticEnabled.present) {
+      map['haptic_enabled'] = Variable<bool>(hapticEnabled.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1361,6 +1624,9 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
           ..write('longBreakDurationMinutes: $longBreakDurationMinutes, ')
           ..write('dailyGoalMinutes: $dailyGoalMinutes, ')
           ..write('activePresetId: $activePresetId, ')
+          ..write('autoStartNextSession: $autoStartNextSession, ')
+          ..write('soundEnabled: $soundEnabled, ')
+          ..write('hapticEnabled: $hapticEnabled, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2171,6 +2437,8 @@ typedef $$FocusSessionEntriesTableCreateCompanionBuilder =
       required int durationSeconds,
       required DateTime completedAt,
       Value<String?> taskId,
+      Value<int> distractionCount,
+      Value<String> status,
       Value<int> rowid,
     });
 typedef $$FocusSessionEntriesTableUpdateCompanionBuilder =
@@ -2180,6 +2448,8 @@ typedef $$FocusSessionEntriesTableUpdateCompanionBuilder =
       Value<int> durationSeconds,
       Value<DateTime> completedAt,
       Value<String?> taskId,
+      Value<int> distractionCount,
+      Value<String> status,
       Value<int> rowid,
     });
 
@@ -2214,6 +2484,16 @@ class $$FocusSessionEntriesTableFilterComposer
 
   ColumnFilters<String> get taskId => $composableBuilder(
     column: $table.taskId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get distractionCount => $composableBuilder(
+    column: $table.distractionCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2251,6 +2531,16 @@ class $$FocusSessionEntriesTableOrderingComposer
     column: $table.taskId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get distractionCount => $composableBuilder(
+    column: $table.distractionCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$FocusSessionEntriesTableAnnotationComposer
@@ -2280,6 +2570,14 @@ class $$FocusSessionEntriesTableAnnotationComposer
 
   GeneratedColumn<String> get taskId =>
       $composableBuilder(column: $table.taskId, builder: (column) => column);
+
+  GeneratedColumn<int> get distractionCount => $composableBuilder(
+    column: $table.distractionCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
 }
 
 class $$FocusSessionEntriesTableTableManager
@@ -2330,6 +2628,8 @@ class $$FocusSessionEntriesTableTableManager
                 Value<int> durationSeconds = const Value.absent(),
                 Value<DateTime> completedAt = const Value.absent(),
                 Value<String?> taskId = const Value.absent(),
+                Value<int> distractionCount = const Value.absent(),
+                Value<String> status = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FocusSessionEntriesCompanion(
                 id: id,
@@ -2337,6 +2637,8 @@ class $$FocusSessionEntriesTableTableManager
                 durationSeconds: durationSeconds,
                 completedAt: completedAt,
                 taskId: taskId,
+                distractionCount: distractionCount,
+                status: status,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2346,6 +2648,8 @@ class $$FocusSessionEntriesTableTableManager
                 required int durationSeconds,
                 required DateTime completedAt,
                 Value<String?> taskId = const Value.absent(),
+                Value<int> distractionCount = const Value.absent(),
+                Value<String> status = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FocusSessionEntriesCompanion.insert(
                 id: id,
@@ -2353,6 +2657,8 @@ class $$FocusSessionEntriesTableTableManager
                 durationSeconds: durationSeconds,
                 completedAt: completedAt,
                 taskId: taskId,
+                distractionCount: distractionCount,
+                status: status,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -2403,6 +2709,9 @@ typedef $$UserSettingsEntriesTableCreateCompanionBuilder =
       Value<int> longBreakDurationMinutes,
       Value<int> dailyGoalMinutes,
       Value<String?> activePresetId,
+      Value<bool> autoStartNextSession,
+      Value<bool> soundEnabled,
+      Value<bool> hapticEnabled,
       Value<int> rowid,
     });
 typedef $$UserSettingsEntriesTableUpdateCompanionBuilder =
@@ -2413,6 +2722,9 @@ typedef $$UserSettingsEntriesTableUpdateCompanionBuilder =
       Value<int> longBreakDurationMinutes,
       Value<int> dailyGoalMinutes,
       Value<String?> activePresetId,
+      Value<bool> autoStartNextSession,
+      Value<bool> soundEnabled,
+      Value<bool> hapticEnabled,
       Value<int> rowid,
     });
 
@@ -2452,6 +2764,21 @@ class $$UserSettingsEntriesTableFilterComposer
 
   ColumnFilters<String> get activePresetId => $composableBuilder(
     column: $table.activePresetId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get autoStartNextSession => $composableBuilder(
+    column: $table.autoStartNextSession,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get soundEnabled => $composableBuilder(
+    column: $table.soundEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hapticEnabled => $composableBuilder(
+    column: $table.hapticEnabled,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2494,6 +2821,21 @@ class $$UserSettingsEntriesTableOrderingComposer
     column: $table.activePresetId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get autoStartNextSession => $composableBuilder(
+    column: $table.autoStartNextSession,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get soundEnabled => $composableBuilder(
+    column: $table.soundEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get hapticEnabled => $composableBuilder(
+    column: $table.hapticEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$UserSettingsEntriesTableAnnotationComposer
@@ -2530,6 +2872,21 @@ class $$UserSettingsEntriesTableAnnotationComposer
 
   GeneratedColumn<String> get activePresetId => $composableBuilder(
     column: $table.activePresetId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get autoStartNextSession => $composableBuilder(
+    column: $table.autoStartNextSession,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get soundEnabled => $composableBuilder(
+    column: $table.soundEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get hapticEnabled => $composableBuilder(
+    column: $table.hapticEnabled,
     builder: (column) => column,
   );
 }
@@ -2583,6 +2940,9 @@ class $$UserSettingsEntriesTableTableManager
                 Value<int> longBreakDurationMinutes = const Value.absent(),
                 Value<int> dailyGoalMinutes = const Value.absent(),
                 Value<String?> activePresetId = const Value.absent(),
+                Value<bool> autoStartNextSession = const Value.absent(),
+                Value<bool> soundEnabled = const Value.absent(),
+                Value<bool> hapticEnabled = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => UserSettingsEntriesCompanion(
                 id: id,
@@ -2591,6 +2951,9 @@ class $$UserSettingsEntriesTableTableManager
                 longBreakDurationMinutes: longBreakDurationMinutes,
                 dailyGoalMinutes: dailyGoalMinutes,
                 activePresetId: activePresetId,
+                autoStartNextSession: autoStartNextSession,
+                soundEnabled: soundEnabled,
+                hapticEnabled: hapticEnabled,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2601,6 +2964,9 @@ class $$UserSettingsEntriesTableTableManager
                 Value<int> longBreakDurationMinutes = const Value.absent(),
                 Value<int> dailyGoalMinutes = const Value.absent(),
                 Value<String?> activePresetId = const Value.absent(),
+                Value<bool> autoStartNextSession = const Value.absent(),
+                Value<bool> soundEnabled = const Value.absent(),
+                Value<bool> hapticEnabled = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => UserSettingsEntriesCompanion.insert(
                 id: id,
@@ -2609,6 +2975,9 @@ class $$UserSettingsEntriesTableTableManager
                 longBreakDurationMinutes: longBreakDurationMinutes,
                 dailyGoalMinutes: dailyGoalMinutes,
                 activePresetId: activePresetId,
+                autoStartNextSession: autoStartNextSession,
+                soundEnabled: soundEnabled,
+                hapticEnabled: hapticEnabled,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

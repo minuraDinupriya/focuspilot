@@ -20,6 +20,8 @@ class FocusSessionRepositoryImpl implements FocusSessionRepository {
             durationSeconds: session.durationSeconds,
             completedAt: session.completedAt,
             taskId: Value(session.taskId),
+            distractionCount: Value(session.distractionCount),
+            status: Value(session.status.name),
           ),
         );
   }
@@ -52,7 +54,8 @@ class FocusSessionRepositoryImpl implements FocusSessionRepository {
         (tbl) =>
             tbl.completedAt.isBiggerOrEqualValue(startOfDay) &
             tbl.completedAt.isSmallerOrEqualValue(endOfDay) &
-            tbl.mode.equals(FocusMode.work.name),
+            tbl.mode.equals(FocusMode.work.name) &
+            tbl.status.equals(SessionStatus.completed.name),
       );
 
     final rows = await query.get();
@@ -85,6 +88,8 @@ class FocusSessionRepositoryImpl implements FocusSessionRepository {
       durationSeconds: entry.durationSeconds,
       completedAt: entry.completedAt,
       taskId: entry.taskId,
+      distractionCount: entry.distractionCount,
+      status: SessionStatus.fromString(entry.status),
     );
   }
 }
