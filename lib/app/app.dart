@@ -6,6 +6,7 @@ import 'package:focuspilot/features/focus/domain/models/ticker.dart';
 import 'package:focuspilot/features/focus/domain/repositories/focus_session_repository.dart';
 import 'package:focuspilot/features/focus/presentation/controllers/focus_bloc.dart';
 import 'package:focuspilot/features/settings/data/repositories/in_memory_settings_repository.dart';
+import 'package:focuspilot/features/settings/data/repositories/sqlite_settings_repository.dart';
 import 'package:focuspilot/features/settings/domain/repositories/settings_repository.dart';
 import 'package:focuspilot/features/settings/presentation/controllers/settings_cubit.dart';
 import 'package:focuspilot/features/tasks/data/datasources/database/app_database.dart';
@@ -39,25 +40,27 @@ class _FocusPilotAppState extends State<FocusPilotApp> {
   @override
   void initState() {
     super.initState();
-    _settingsRepository =
-        widget.settingsRepository ?? InMemorySettingsRepository();
 
     if (widget.taskRepository != null &&
         widget.focusSessionRepository != null) {
       _taskRepository = widget.taskRepository!;
       _focusSessionRepository = widget.focusSessionRepository!;
+      _settingsRepository =
+          widget.settingsRepository ?? InMemorySettingsRepository();
     } else {
       _database = AppDatabase();
       _taskRepository = widget.taskRepository ?? TaskRepositoryImpl(_database);
       _focusSessionRepository =
           widget.focusSessionRepository ??
           FocusSessionRepositoryImpl(_database);
+      _settingsRepository =
+          widget.settingsRepository ?? SqliteSettingsRepository(_database);
     }
   }
 
   @override
   void dispose() {
-    if (widget.taskRepository == null &&
+    if (widget.taskRepository == null ||
         widget.focusSessionRepository == null) {
       _database.close();
     }
