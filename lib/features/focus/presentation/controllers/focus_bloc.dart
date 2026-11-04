@@ -2,16 +2,20 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:focuspilot/features/focus/domain/models/focus_mode.dart';
 import 'package:focuspilot/features/focus/domain/models/focus_session.dart';
 import 'package:focuspilot/features/focus/domain/models/ticker.dart';
 import 'package:focuspilot/features/focus/domain/repositories/focus_session_repository.dart';
 import 'package:focuspilot/features/focus/presentation/controllers/focus_event.dart';
 import 'package:focuspilot/features/focus/presentation/controllers/focus_state.dart';
+import 'package:focuspilot/features/settings/domain/models/user_settings.dart';
+import 'package:focuspilot/features/settings/domain/repositories/settings_repository.dart';
 
 class FocusBloc extends Bloc<FocusEvent, FocusState> {
   FocusBloc({
     required this.ticker,
     required this.sessionRepository,
+    this.settingsRepository,
     FocusState? initialState,
   }) : super(initialState ?? const FocusState()) {
     on<FocusStarted>(_onStarted);
@@ -22,13 +26,34 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     on<FocusModeChanged>(_onModeChanged);
     on<FocusTaskLinked>(_onTaskLinked);
     on<FocusSessionsCountRefreshed>(_onSessionsCountRefreshed);
+    on<FocusSettingsChanged>(_onSettingsChanged);
 
     add(const FocusSessionsCountRefreshed());
+
+    if (settingsRepository != null) {
+      _settingsSubscription = settingsRepository!.watchSettings().listen(
+        (settings) => add(FocusSettingsChanged(settings: settings)),
+      );
+    }
   }
 
   final Ticker ticker;
   final FocusSessionRepository sessionRepository;
+  final SettingsRepository? settingsRepository;
   StreamSubscription<int>? _tickerSubscription;
+  StreamSubscription<UserSettings>? _settingsSubscription;
+  UserSettings _settings = const UserSettings();
+
+  int _durationForMode(FocusMode mode, UserSettings settings) {
+    switch (mode) {
+      case FocusMode.work:
+        return settings.workDurationSeconds;
+      case FocusMode.shortBreak:
+        return settings.shortBreakDurationSeconds;
+      case FocusMode.longBreak:
+        return settings.longBreakDurationSeconds;
+    }
+  }
 
   void _onStarted(FocusStarted event, Emitter<FocusState> emit) {
     emit(
@@ -96,25 +121,25 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
 
   void _onReset(FocusReset event, Emitter<FocusState> emit) {
     _tickerSubscription?.cancel();
-    final defaultDuration = state.mode.defaultDurationSeconds;
+    final duration = _durationForMode(state.mode, _settings);
     emit(
       state.copyWith(
         status: FocusStatus.initial,
-        durationSeconds: defaultDuration,
-        totalDurationSeconds: defaultDuration,
+        durationSeconds: duration,
+        totalDurationSeconds: duration,
       ),
     );
   }
 
   void _onModeChanged(FocusModeChanged event, Emitter<FocusState> emit) {
     _tickerSubscription?.cancel();
-    final defaultDuration = event.mode.defaultDurationSeconds;
+    final duration = _durationForMode(event.mode, _settings);
     emit(
       state.copyWith(
         status: FocusStatus.initial,
         mode: event.mode,
-        durationSeconds: defaultDuration,
-        totalDurationSeconds: defaultDuration,
+        durationSeconds: duration,
+        totalDurationSeconds: duration,
       ),
     );
   }
@@ -136,9 +161,26 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     emit(state.copyWith(sessionsCompletedToday: count));
   }
 
+  void _onSettingsChanged(
+    FocusSettingsChanged event,
+    Emitter<FocusState> emit,
+  ) {
+    _settings = event.settings;
+    if (state.isInitial) {
+      final duration = _durationForMode(state.mode, _settings);
+      emit(
+        state.copyWith(
+          durationSeconds: duration,
+          totalDurationSeconds: duration,
+        ),
+      );
+    }
+  }
+
   @override
   Future<void> close() {
     _tickerSubscription?.cancel();
+    _settingsSubscription?.cancel();
     return super.close();
   }
 }

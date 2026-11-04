@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:focuspilot/features/focus/domain/models/focus_mode.dart';
+import 'package:focuspilot/features/settings/domain/models/user_settings.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
 
 abstract class FocusEvent extends Equatable {
@@ -59,4 +60,13 @@ class FocusTaskLinked extends FocusEvent {
 
 class FocusSessionsCountRefreshed extends FocusEvent {
   const FocusSessionsCountRefreshed();
+}
+
+class FocusSettingsChanged extends FocusEvent {
+  const FocusSettingsChanged({required this.settings});
+
+  final UserSettings settings;
+
+  @override
+  List<Object?> get props => [settings];
 }

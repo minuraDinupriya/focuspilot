@@ -98,6 +98,7 @@ class _FocusPilotAppState extends State<FocusPilotApp> {
             create: (context) => FocusBloc(
               ticker: const Ticker(),
               sessionRepository: _focusSessionRepository,
+              settingsRepository: _settingsRepository,
             ),
           ),
         ],

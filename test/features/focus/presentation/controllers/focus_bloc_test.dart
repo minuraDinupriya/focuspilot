@@ -6,6 +6,8 @@ import 'package:focuspilot/features/focus/domain/models/ticker.dart';
 import 'package:focuspilot/features/focus/presentation/controllers/focus_bloc.dart';
 import 'package:focuspilot/features/focus/presentation/controllers/focus_event.dart';
 import 'package:focuspilot/features/focus/presentation/controllers/focus_state.dart';
+import 'package:focuspilot/features/settings/data/repositories/in_memory_settings_repository.dart';
+import 'package:focuspilot/features/settings/domain/models/user_settings.dart';
 
 import '../../fakes/fake_focus_session_repository.dart';
 
@@ -97,6 +99,45 @@ void main() {
       expect(bloc.state.isCompleted, isTrue);
       final sessions = await repository.getSessions();
       expect(sessions.length, 1);
+    });
+
+    test('FocusBloc dynamically adapts to custom settings durations', () async {
+      final settingsRepo = InMemorySettingsRepository();
+      final customBloc = FocusBloc(
+        ticker: const FakeTicker(),
+        sessionRepository: repository,
+        settingsRepository: settingsRepo,
+      );
+
+      await pumpEventQueue();
+
+      // Update custom settings
+      await settingsRepo.saveSettings(
+        const UserSettings(
+          workDurationMinutes: 45,
+          shortBreakDurationMinutes: 8,
+          longBreakDurationMinutes: 20,
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(customBloc.state.durationSeconds, 45 * 60);
+      expect(customBloc.state.timerString, '45:00');
+
+      // Mode change to short break uses 8 min
+      customBloc.add(const FocusModeChanged(mode: FocusMode.shortBreak));
+      await pumpEventQueue();
+      expect(customBloc.state.durationSeconds, 8 * 60);
+      expect(customBloc.state.timerString, '08:00');
+
+      // Mode change to long break uses 20 min
+      customBloc.add(const FocusModeChanged(mode: FocusMode.longBreak));
+      await pumpEventQueue();
+      expect(customBloc.state.durationSeconds, 20 * 60);
+      expect(customBloc.state.timerString, '20:00');
+
+      await customBloc.close();
+      settingsRepo.dispose();
     });
   });
 }

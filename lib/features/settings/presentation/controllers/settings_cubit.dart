@@ -67,6 +67,7 @@ class SettingsCubit extends Cubit<SettingsState> {
 
   Future<void> updateSettings(UserSettings settings) async {
     try {
+      emit(state.copyWith(status: SettingsStatus.loaded, settings: settings));
       await _settingsRepository.saveSettings(settings);
     } catch (e) {
       if (!isClosed) {

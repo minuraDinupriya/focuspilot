@@ -37,12 +37,54 @@ void main() {
 
       expect(find.text('Focus & Timer Settings'), findsOneWidget);
       expect(find.text('Focus Duration'), findsOneWidget);
+      expect(find.text('Short Break Duration'), findsOneWidget);
+      expect(find.text('Long Break Duration'), findsOneWidget);
+      expect(find.text('Daily Focus Target'), findsOneWidget);
       expect(find.text('50 min'), findsOneWidget);
 
       await tester.tap(find.text('50 min'));
       await tester.pumpAndSettle();
 
       expect(cubit.state.settings.workDurationMinutes, 50);
+    });
+
+    testWidgets('tapping Custom opens dialog and sets custom duration', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BlocProvider<SettingsCubit>.value(
+              value: cubit,
+              child: const SettingsSheet(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap first "Custom..." button (for Focus duration)
+      final customButtons = find.text('Custom...');
+      expect(customButtons, findsWidgets);
+
+      await tester.tap(customButtons.first);
+      await tester.pumpAndSettle();
+
+      // Dialog is open
+      expect(find.text('Custom Focus Duration'), findsOneWidget);
+
+      // Enter 38 in the text field
+      final textField = find.byType(TextField);
+      expect(textField, findsOneWidget);
+      await tester.enterText(textField, '38');
+      await tester.pumpAndSettle();
+
+      // Tap Save
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(cubit.state.settings.workDurationMinutes, 38);
+      expect(find.text('38 min (Custom)'), findsOneWidget);
     });
   });
 }
