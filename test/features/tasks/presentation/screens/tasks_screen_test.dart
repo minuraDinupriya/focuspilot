@@ -105,5 +105,33 @@ void main() {
       expect(find.text('Save Changes'), findsOneWidget);
       expect(find.text('Subtasks (0/0)'), findsOneWidget);
     });
+
+    testWidgets('typing in search bar filters visible tasks', (tester) async {
+      final task1 = Task(
+        id: 't-1',
+        title: 'Physics Assignment',
+        category: 'Study',
+        createdAt: DateTime(2026, 11, 1),
+      );
+      final task2 = Task(
+        id: 't-2',
+        title: 'Call Plumber',
+        category: 'Personal',
+        createdAt: DateTime(2026, 11, 1),
+      );
+
+      repository.emitTasks([task1, task2]);
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Physics Assignment'), findsOneWidget);
+      expect(find.text('Call Plumber'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField).first, 'physics');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Physics Assignment'), findsOneWidget);
+      expect(find.text('Call Plumber'), findsNothing);
+    });
   });
 }

@@ -121,5 +121,89 @@ void main() {
         expect(repository.tasks.first.subtasks, isEmpty);
       },
     );
+
+    test(
+      'searchQuery filters tasks by title or category case-insensitively',
+      () async {
+        final taskA = Task(
+          id: '1',
+          title: 'Algorithms Midterm',
+          category: 'Study',
+          createdAt: DateTime(2026, 11, 4),
+        );
+        final taskB = Task(
+          id: '2',
+          title: 'Grocery shopping',
+          category: 'Personal',
+          createdAt: DateTime(2026, 11, 4),
+        );
+
+        repository.emitTasks([taskA, taskB]);
+        await pumpEventQueue();
+
+        cubit.setSearchQuery('algo');
+        expect(cubit.state.filteredTasks.length, 1);
+        expect(cubit.state.filteredTasks.first.id, '1');
+
+        cubit.setSearchQuery('personal');
+        expect(cubit.state.filteredTasks.length, 1);
+        expect(cubit.state.filteredTasks.first.id, '2');
+
+        cubit.setSearchQuery('xyz');
+        expect(cubit.state.filteredTasks, isEmpty);
+      },
+    );
+
+    test(
+      'multi-filters combine priority, category and due date correctly',
+      () async {
+        final now = DateTime.now();
+        final overdueDate = now.subtract(const Duration(days: 2));
+
+        final taskHighStudy = Task(
+          id: '1',
+          title: 'Calculus Final',
+          category: 'Study',
+          priority: TaskPriority.high,
+          dueDate: overdueDate,
+          createdAt: now,
+        );
+        final taskLowStudy = Task(
+          id: '2',
+          title: 'Read Article',
+          category: 'Study',
+          priority: TaskPriority.low,
+          createdAt: now,
+        );
+        final taskHighWork = Task(
+          id: '3',
+          title: 'Submit Report',
+          category: 'Work',
+          priority: TaskPriority.high,
+          createdAt: now,
+        );
+
+        repository.emitTasks([taskHighStudy, taskLowStudy, taskHighWork]);
+        await pumpEventQueue();
+
+        // Filter by Priority High
+        cubit.setPriorityFilter(TaskPriority.high);
+        expect(cubit.state.filteredTasks.length, 2);
+
+        // Add Category Study filter
+        cubit.setCategoryFilter('Study');
+        expect(cubit.state.filteredTasks.length, 1);
+        expect(cubit.state.filteredTasks.first.id, '1');
+
+        // Add Overdue DueDate filter
+        cubit.setDueDateFilter(DueDateFilter.overdue);
+        expect(cubit.state.filteredTasks.length, 1);
+
+        // Reset filters
+        cubit.resetFilters();
+        expect(cubit.state.filteredTasks.length, 3);
+        expect(cubit.state.hasActiveFilters, isFalse);
+      },
+    );
   });
 }

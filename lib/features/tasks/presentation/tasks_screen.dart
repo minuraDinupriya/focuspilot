@@ -58,6 +58,41 @@ class TasksScreen extends StatelessWidget {
 
           return Column(
             children: [
+              // Search Bar
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Search tasks by title, category, or tags...',
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    suffixIcon: state.searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () {
+                              context.read<TasksCubit>().setSearchQuery('');
+                            },
+                          )
+                        : null,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    filled: true,
+                    fillColor: theme.colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.5),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onChanged: (val) {
+                    context.read<TasksCubit>().setSearchQuery(val);
+                  },
+                ),
+              ),
+
+              // Filter Bar
               TaskFilterBar(
                 selectedFilter: state.filter,
                 onFilterSelected: (filter) {
@@ -66,6 +101,23 @@ class TasksScreen extends StatelessWidget {
                 allCount: state.tasks.length,
                 activeCount: state.activeTasksCount,
                 completedCount: state.completedTasksCount,
+                selectedPriority: state.priorityFilter,
+                onPrioritySelected: (priority) {
+                  context.read<TasksCubit>().setPriorityFilter(priority);
+                },
+                selectedCategory: state.categoryFilter,
+                categories: state.availableCategories,
+                onCategorySelected: (cat) {
+                  context.read<TasksCubit>().setCategoryFilter(cat);
+                },
+                selectedDueDate: state.dueDateFilter,
+                onDueDateSelected: (due) {
+                  context.read<TasksCubit>().setDueDateFilter(due);
+                },
+                hasActiveFilters: state.hasActiveFilters,
+                onResetFilters: () {
+                  context.read<TasksCubit>().resetFilters();
+                },
               ),
               Expanded(
                 child: state.filteredTasks.isEmpty
