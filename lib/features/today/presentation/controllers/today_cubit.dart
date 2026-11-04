@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:focuspilot/features/focus/domain/models/focus_mode.dart';
 import 'package:focuspilot/features/focus/domain/models/focus_session.dart';
 import 'package:focuspilot/features/focus/domain/repositories/focus_session_repository.dart';
+import 'package:focuspilot/features/settings/domain/repositories/settings_repository.dart';
 import 'package:focuspilot/features/tasks/domain/models/task_priority.dart';
 import 'package:focuspilot/features/tasks/domain/repositories/task_repository.dart';
 import 'package:focuspilot/features/today/domain/models/daily_focus_metric.dart';
@@ -13,18 +14,24 @@ class TodayCubit extends Cubit<TodayState> {
   TodayCubit({
     required FocusSessionRepository sessionRepository,
     required TaskRepository taskRepository,
-  }) : this._(sessionRepository, taskRepository);
+    SettingsRepository? settingsRepository,
+  }) : this._(sessionRepository, taskRepository, settingsRepository);
 
-  TodayCubit._(this._sessionRepository, this._taskRepository)
-    : super(const TodayState()) {
+  TodayCubit._(
+    this._sessionRepository,
+    this._taskRepository,
+    this._settingsRepository,
+  ) : super(const TodayState()) {
     _initSubscriptions();
   }
 
   final FocusSessionRepository _sessionRepository;
   final TaskRepository _taskRepository;
+  final SettingsRepository? _settingsRepository;
 
   StreamSubscription? _sessionSubscription;
   StreamSubscription? _taskSubscription;
+  StreamSubscription? _settingsSubscription;
 
   void _initSubscriptions() {
     emit(state.copyWith(status: TodayStatus.loading));
@@ -60,6 +67,16 @@ class TodayCubit extends Cubit<TodayState> {
         }
       },
     );
+
+    if (_settingsRepository != null) {
+      _settingsSubscription = _settingsRepository.watchSettings().listen((
+        settings,
+      ) {
+        if (!isClosed) {
+          emit(state.copyWith(dailyGoalMinutes: settings.dailyGoalMinutes));
+        }
+      });
+    }
 
     _recalculate();
   }
@@ -116,10 +133,17 @@ class TodayCubit extends Cubit<TodayState> {
       // Compute streak
       final streak = _calculateStreak(sessions, now);
 
+      int goalMinutes = state.dailyGoalMinutes;
+      if (_settingsRepository != null) {
+        final s = await _settingsRepository.getSettings();
+        goalMinutes = s.dailyGoalMinutes;
+      }
+
       emit(
         state.copyWith(
           status: TodayStatus.loaded,
           focusMinutesToday: focusMinutes,
+          dailyGoalMinutes: goalMinutes,
           completedSessionsToday: completedWorkSessions.length,
           completedTasksToday: completedTasksCount,
           weeklyMetrics: weeklyMetrics,
@@ -254,6 +278,7 @@ class TodayCubit extends Cubit<TodayState> {
   Future<void> close() {
     _sessionSubscription?.cancel();
     _taskSubscription?.cancel();
+    _settingsSubscription?.cancel();
     return super.close();
   }
 }

@@ -5,6 +5,9 @@ import 'package:focuspilot/features/focus/data/repositories/focus_session_reposi
 import 'package:focuspilot/features/focus/domain/models/ticker.dart';
 import 'package:focuspilot/features/focus/domain/repositories/focus_session_repository.dart';
 import 'package:focuspilot/features/focus/presentation/controllers/focus_bloc.dart';
+import 'package:focuspilot/features/settings/data/repositories/in_memory_settings_repository.dart';
+import 'package:focuspilot/features/settings/domain/repositories/settings_repository.dart';
+import 'package:focuspilot/features/settings/presentation/controllers/settings_cubit.dart';
 import 'package:focuspilot/features/tasks/data/datasources/database/app_database.dart';
 import 'package:focuspilot/features/tasks/data/repositories/task_repository_impl.dart';
 import 'package:focuspilot/features/tasks/domain/repositories/task_repository.dart';
@@ -16,10 +19,12 @@ class FocusPilotApp extends StatefulWidget {
     super.key,
     this.taskRepository,
     this.focusSessionRepository,
+    this.settingsRepository,
   });
 
   final TaskRepository? taskRepository;
   final FocusSessionRepository? focusSessionRepository;
+  final SettingsRepository? settingsRepository;
 
   @override
   State<FocusPilotApp> createState() => _FocusPilotAppState();
@@ -29,10 +34,14 @@ class _FocusPilotAppState extends State<FocusPilotApp> {
   late final AppDatabase _database;
   late final TaskRepository _taskRepository;
   late final FocusSessionRepository _focusSessionRepository;
+  late final SettingsRepository _settingsRepository;
 
   @override
   void initState() {
     super.initState();
+    _settingsRepository =
+        widget.settingsRepository ?? InMemorySettingsRepository();
+
     if (widget.taskRepository != null &&
         widget.focusSessionRepository != null) {
       _taskRepository = widget.taskRepository!;
@@ -63,13 +72,20 @@ class _FocusPilotAppState extends State<FocusPilotApp> {
         RepositoryProvider<FocusSessionRepository>.value(
           value: _focusSessionRepository,
         ),
+        RepositoryProvider<SettingsRepository>.value(
+          value: _settingsRepository,
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
+          BlocProvider<SettingsCubit>(
+            create: (context) => SettingsCubit(_settingsRepository),
+          ),
           BlocProvider<TodayCubit>(
             create: (context) => TodayCubit(
               sessionRepository: _focusSessionRepository,
               taskRepository: _taskRepository,
+              settingsRepository: _settingsRepository,
             ),
           ),
           BlocProvider<TasksCubit>(
