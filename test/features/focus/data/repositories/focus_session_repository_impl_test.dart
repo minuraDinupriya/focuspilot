@@ -69,5 +69,25 @@ void main() {
       final minutes = await repository.getTodayFocusMinutes();
       expect(minutes, 25);
     });
+
+    test('persists distraction count and session status correctly', () async {
+      final sessionWithDistractions = FocusSession(
+        id: 'session-distractions',
+        mode: FocusMode.work,
+        durationSeconds: 1200,
+        completedAt: now,
+        distractionCount: 4,
+        status: SessionStatus.skipped,
+      );
+
+      await repository.saveSession(sessionWithDistractions);
+      final retrieved = await repository.getSessions();
+      final target = retrieved.firstWhere(
+        (s) => s.id == 'session-distractions',
+      );
+
+      expect(target.distractionCount, 4);
+      expect(target.status, SessionStatus.skipped);
+    });
   });
 }

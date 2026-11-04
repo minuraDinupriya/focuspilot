@@ -7,6 +7,9 @@ class UserSettings extends Equatable {
     this.longBreakDurationMinutes = 15,
     this.dailyGoalMinutes = 120,
     this.activePresetId = 'preset-classic',
+    this.autoStartNextSession = false,
+    this.soundEnabled = true,
+    this.hapticEnabled = true,
   });
 
   final int workDurationMinutes;
@@ -14,6 +17,9 @@ class UserSettings extends Equatable {
   final int longBreakDurationMinutes;
   final int dailyGoalMinutes;
   final String? activePresetId;
+  final bool autoStartNextSession;
+  final bool soundEnabled;
+  final bool hapticEnabled;
 
   int get workDurationSeconds => workDurationMinutes * 60;
   int get shortBreakDurationSeconds => shortBreakDurationMinutes * 60;
@@ -26,6 +32,9 @@ class UserSettings extends Equatable {
     int? dailyGoalMinutes,
     String? activePresetId,
     bool clearActivePresetId = false,
+    bool? autoStartNextSession,
+    bool? soundEnabled,
+    bool? hapticEnabled,
   }) {
     return UserSettings(
       workDurationMinutes: workDurationMinutes ?? this.workDurationMinutes,
@@ -37,6 +46,9 @@ class UserSettings extends Equatable {
       activePresetId: clearActivePresetId
           ? null
           : (activePresetId ?? this.activePresetId),
+      autoStartNextSession: autoStartNextSession ?? this.autoStartNextSession,
+      soundEnabled: soundEnabled ?? this.soundEnabled,
+      hapticEnabled: hapticEnabled ?? this.hapticEnabled,
     );
   }
 
@@ -47,5 +59,8 @@ class UserSettings extends Equatable {
     longBreakDurationMinutes,
     dailyGoalMinutes,
     activePresetId,
+    autoStartNextSession,
+    soundEnabled,
+    hapticEnabled,
   ];
 }

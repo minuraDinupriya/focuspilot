@@ -13,6 +13,7 @@ class FocusState extends Equatable {
     this.linkedTask,
     this.sessionsCompletedToday = 0,
     this.targetEndTime,
+    this.distractionCount = 0,
   }) : durationSeconds = durationSeconds ?? 25 * 60,
        totalDurationSeconds = totalDurationSeconds ?? 25 * 60;
 
@@ -23,6 +24,7 @@ class FocusState extends Equatable {
   final Task? linkedTask;
   final int sessionsCompletedToday;
   final DateTime? targetEndTime;
+  final int distractionCount;
 
   double get progress {
     if (totalDurationSeconds <= 0) return 0.0;
@@ -51,6 +53,7 @@ class FocusState extends Equatable {
     int? sessionsCompletedToday,
     DateTime? targetEndTime,
     bool clearTargetEndTime = false,
+    int? distractionCount,
   }) {
     return FocusState(
       status: status ?? this.status,
@@ -63,6 +66,7 @@ class FocusState extends Equatable {
       targetEndTime: clearTargetEndTime
           ? null
           : (targetEndTime ?? this.targetEndTime),
+      distractionCount: distractionCount ?? this.distractionCount,
     );
   }
 
@@ -75,5 +79,6 @@ class FocusState extends Equatable {
     linkedTask,
     sessionsCompletedToday,
     targetEndTime,
+    distractionCount,
   ];
 }

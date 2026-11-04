@@ -97,5 +97,25 @@ void main() {
       expect(cubit.state.settings.longBreakDurationMinutes, 30);
       expect(cubit.state.settings.activePresetId, 'preset-deep-work');
     });
+
+    testWidgets('toggling auto-start and alert switches updates settings', (
+      tester,
+    ) async {
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pumpAndSettle();
+
+      final autoStartFinder = find.widgetWithText(
+        SwitchListTile,
+        'Auto-start Next Session',
+      );
+      await tester.scrollUntilVisible(autoStartFinder, 200);
+      await tester.pumpAndSettle();
+      expect(autoStartFinder, findsOneWidget);
+
+      await tester.tap(autoStartFinder);
+      await tester.pumpAndSettle();
+
+      expect(cubit.state.settings.autoStartNextSession, isTrue);
+    });
   });
 }

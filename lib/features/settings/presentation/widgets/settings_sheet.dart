@@ -259,6 +259,53 @@ class SettingsSheet extends StatelessWidget {
                   );
                 },
               ),
+              const SizedBox(height: 20),
+              const Divider(),
+              const SizedBox(height: 12),
+
+              Text(
+                'Timer Automation & Alerts',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Auto-start Next Session'),
+                subtitle: const Text(
+                  'Automatically begin breaks and work cycles',
+                ),
+                value: settings.autoStartNextSession,
+                onChanged: (val) {
+                  context.read<SettingsCubit>().updateSettings(
+                    settings.copyWith(autoStartNextSession: val),
+                  );
+                },
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Sound Alerts'),
+                subtitle: const Text('Play a sound when a session finishes'),
+                value: settings.soundEnabled,
+                onChanged: (val) {
+                  context.read<SettingsCubit>().updateSettings(
+                    settings.copyWith(soundEnabled: val),
+                  );
+                },
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Vibration Feedback'),
+                subtitle: const Text('Haptic vibration on session completion'),
+                value: settings.hapticEnabled,
+                onChanged: (val) {
+                  context.read<SettingsCubit>().updateSettings(
+                    settings.copyWith(hapticEnabled: val),
+                  );
+                },
+              ),
               const SizedBox(height: 12),
             ],
           ),

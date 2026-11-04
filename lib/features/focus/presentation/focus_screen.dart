@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:focuspilot/features/focus/domain/models/focus_mode.dart';
 import 'package:focuspilot/features/focus/presentation/controllers/focus_bloc.dart';
@@ -140,14 +141,34 @@ class _FocusScreenState extends State<FocusScreen> with WidgetsBindingObserver {
                     context.read<FocusBloc>().add(const FocusReset());
                   },
                   onSkip: () {
-                    final nextMode = state.mode == FocusMode.work
-                        ? FocusMode.shortBreak
-                        : FocusMode.work;
-                    context.read<FocusBloc>().add(
-                      FocusModeChanged(mode: nextMode),
-                    );
+                    context.read<FocusBloc>().add(const FocusSkipped());
                   },
                 ),
+                if (state.isRunning || state.isPaused) ...[
+                  const SizedBox(height: 20),
+                  ActionChip(
+                    avatar: Icon(
+                      Icons.bolt,
+                      size: 18,
+                      color: state.distractionCount > 0
+                          ? theme.colorScheme.error
+                          : theme.colorScheme.primary,
+                    ),
+                    label: Text(
+                      'Distractions: ${state.distractionCount} (+1)',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    tooltip: 'Tap to log an interruption during this session',
+                    onPressed: () {
+                      HapticFeedback.selectionClick();
+                      context.read<FocusBloc>().add(
+                        const FocusDistractionRecorded(),
+                      );
+                    },
+                  ),
+                ],
               ],
             ),
           );

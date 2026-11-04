@@ -230,5 +230,91 @@ void main() {
         await testBloc.close();
       },
     );
+
+    test('FocusDistractionRecorded increments distractionCount during active session', () async {
+      final controlledBloc = FocusBloc(
+        ticker: const FakeTicker(stream: Stream.empty()),
+        sessionRepository: repository,
+      );
+
+      controlledBloc.add(const FocusStarted(durationSeconds: 1500));
+      await pumpEventQueue();
+
+      expect(controlledBloc.state.isRunning, isTrue);
+      expect(controlledBloc.state.distractionCount, 0);
+
+      controlledBloc.add(const FocusDistractionRecorded());
+      await pumpEventQueue();
+      expect(controlledBloc.state.distractionCount, 1);
+
+      controlledBloc.add(const FocusDistractionRecorded());
+      await pumpEventQueue();
+      expect(controlledBloc.state.distractionCount, 2);
+
+      controlledBloc.add(const FocusReset());
+      await pumpEventQueue();
+      expect(controlledBloc.state.distractionCount, 0);
+
+      await controlledBloc.close();
+    });
+
+    test('FocusSkipped saves skipped session and switches mode', () async {
+      final controlledBloc = FocusBloc(
+        ticker: const FakeTicker(stream: Stream.empty()),
+        sessionRepository: repository,
+      );
+
+      controlledBloc.add(const FocusStarted(durationSeconds: 1500));
+      await pumpEventQueue();
+
+      controlledBloc.add(const FocusDistractionRecorded());
+      await pumpEventQueue();
+
+      // Trigger skip
+      controlledBloc.add(const FocusSkipped());
+      await pumpEventQueue();
+
+      expect(controlledBloc.state.mode, FocusMode.shortBreak);
+      expect(controlledBloc.state.isInitial, isTrue);
+      expect(controlledBloc.state.distractionCount, 0);
+
+      await controlledBloc.close();
+    });
+
+    test(
+      'Auto-start next session automatically transitions and runs next timer',
+      () async {
+        final settingsRepo = InMemorySettingsRepository();
+        await settingsRepo.saveSettings(
+          const UserSettings(
+            workDurationMinutes: 25,
+            shortBreakDurationMinutes: 5,
+            autoStartNextSession: true,
+          ),
+        );
+
+        final autoBloc = FocusBloc(
+          ticker: const FakeTicker(stream: Stream.empty()),
+          sessionRepository: repository,
+          settingsRepository: settingsRepo,
+        );
+        await pumpEventQueue();
+
+        autoBloc.add(const FocusStarted(durationSeconds: 10));
+        await pumpEventQueue();
+
+        // Skip current session
+        autoBloc.add(const FocusSkipped());
+        await pumpEventQueue();
+
+        // With autoStartNextSession: true, it should immediately be running the next mode
+        expect(autoBloc.state.mode, FocusMode.shortBreak);
+        expect(autoBloc.state.isRunning, isTrue);
+        expect(autoBloc.state.durationSeconds, 5 * 60);
+
+        await autoBloc.close();
+        settingsRepo.dispose();
+      },
+    );
   });
 }

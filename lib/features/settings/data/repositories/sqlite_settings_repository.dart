@@ -48,6 +48,9 @@ class SqliteSettingsRepository implements SettingsRepository {
             longBreakDurationMinutes: Value(settings.longBreakDurationMinutes),
             dailyGoalMinutes: Value(settings.dailyGoalMinutes),
             activePresetId: Value(settings.activePresetId),
+            autoStartNextSession: Value(settings.autoStartNextSession),
+            soundEnabled: Value(settings.soundEnabled),
+            hapticEnabled: Value(settings.hapticEnabled),
           ),
         );
   }
@@ -122,6 +125,9 @@ class SqliteSettingsRepository implements SettingsRepository {
       longBreakDurationMinutes: entry.longBreakDurationMinutes,
       dailyGoalMinutes: entry.dailyGoalMinutes,
       activePresetId: entry.activePresetId,
+      autoStartNextSession: entry.autoStartNextSession,
+      soundEnabled: entry.soundEnabled,
+      hapticEnabled: entry.hapticEnabled,
     );
   }
 

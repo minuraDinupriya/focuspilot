@@ -30,6 +30,8 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     on<FocusSessionsCountRefreshed>(_onSessionsCountRefreshed);
     on<FocusSettingsChanged>(_onSettingsChanged);
     on<FocusAppForegrounded>(_onAppForegrounded);
+    on<FocusDistractionRecorded>(_onDistractionRecorded);
+    on<FocusSkipped>(_onSkipped);
 
     add(const FocusSessionsCountRefreshed());
 
@@ -112,6 +114,66 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     }
   }
 
+  void _onDistractionRecorded(
+    FocusDistractionRecorded event,
+    Emitter<FocusState> emit,
+  ) {
+    if (state.isRunning || state.isPaused) {
+      emit(state.copyWith(distractionCount: state.distractionCount + 1));
+    }
+  }
+
+  Future<void> _onSkipped(FocusSkipped event, Emitter<FocusState> emit) async {
+    await _tickerSubscription?.cancel();
+
+    final elapsedSeconds = state.totalDurationSeconds - state.durationSeconds;
+    if (elapsedSeconds > 0) {
+      try {
+        final session = FocusSession.create(
+          mode: state.mode,
+          durationSeconds: elapsedSeconds,
+          taskId: state.linkedTask?.id,
+          distractionCount: state.distractionCount,
+          status: SessionStatus.skipped,
+        );
+        await sessionRepository.saveSession(session);
+      } catch (_) {}
+    }
+
+    final nextMode = state.mode == FocusMode.work
+        ? FocusMode.shortBreak
+        : FocusMode.work;
+    final nextDuration = _durationForMode(nextMode, _settings);
+
+    if (_settings.autoStartNextSession) {
+      final target = now().add(Duration(seconds: nextDuration));
+      emit(
+        state.copyWith(
+          status: FocusStatus.running,
+          mode: nextMode,
+          durationSeconds: nextDuration,
+          totalDurationSeconds: nextDuration,
+          targetEndTime: target,
+          distractionCount: 0,
+        ),
+      );
+      _tickerSubscription = ticker
+          .tick(ticks: nextDuration)
+          .listen((duration) => add(FocusTicked(durationSeconds: duration)));
+    } else {
+      emit(
+        state.copyWith(
+          status: FocusStatus.initial,
+          mode: nextMode,
+          durationSeconds: nextDuration,
+          totalDurationSeconds: nextDuration,
+          clearTargetEndTime: true,
+          distractionCount: 0,
+        ),
+      );
+    }
+  }
+
   Future<void> _completeSession(Emitter<FocusState> emit) async {
     await _tickerSubscription?.cancel();
 
@@ -120,23 +182,55 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
         mode: state.mode,
         durationSeconds: state.totalDurationSeconds,
         taskId: state.linkedTask?.id,
+        distractionCount: state.distractionCount,
+        status: SessionStatus.completed,
       );
       await sessionRepository.saveSession(session);
-      HapticFeedback.vibrate();
+      if (_settings.hapticEnabled) {
+        HapticFeedback.vibrate();
+      }
+      if (_settings.soundEnabled) {
+        SystemSound.play(SystemSoundType.alert);
+      }
     } catch (_) {
       // Continue even if logging fails
     }
 
     final count = await sessionRepository.getCompletedSessionsCountToday();
 
-    emit(
-      state.copyWith(
-        status: FocusStatus.completed,
-        durationSeconds: 0,
-        clearTargetEndTime: true,
-        sessionsCompletedToday: count,
-      ),
-    );
+    if (_settings.autoStartNextSession) {
+      final nextMode = state.mode == FocusMode.work
+          ? FocusMode.shortBreak
+          : FocusMode.work;
+      final nextDuration = _durationForMode(nextMode, _settings);
+      final target = now().add(Duration(seconds: nextDuration));
+
+      emit(
+        state.copyWith(
+          status: FocusStatus.running,
+          mode: nextMode,
+          durationSeconds: nextDuration,
+          totalDurationSeconds: nextDuration,
+          targetEndTime: target,
+          distractionCount: 0,
+          sessionsCompletedToday: count,
+        ),
+      );
+
+      _tickerSubscription = ticker
+          .tick(ticks: nextDuration)
+          .listen((duration) => add(FocusTicked(durationSeconds: duration)));
+    } else {
+      emit(
+        state.copyWith(
+          status: FocusStatus.completed,
+          durationSeconds: 0,
+          clearTargetEndTime: true,
+          distractionCount: 0,
+          sessionsCompletedToday: count,
+        ),
+      );
+    }
   }
 
   void _onPaused(FocusPaused event, Emitter<FocusState> emit) {
@@ -165,6 +259,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
         durationSeconds: duration,
         totalDurationSeconds: duration,
         clearTargetEndTime: true,
+        distractionCount: 0,
       ),
     );
   }
@@ -179,6 +274,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
         durationSeconds: duration,
         totalDurationSeconds: duration,
         clearTargetEndTime: true,
+        distractionCount: 0,
       ),
     );
   }

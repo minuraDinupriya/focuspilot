@@ -27,6 +27,8 @@ class FocusSessionEntries extends Table {
   IntColumn get durationSeconds => integer()();
   DateTimeColumn get completedAt => dateTime()();
   TextColumn get taskId => text().nullable()();
+  IntColumn get distractionCount => integer().withDefault(const Constant(0))();
+  TextColumn get status => text().withDefault(const Constant('completed'))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -44,6 +46,10 @@ class UserSettingsEntries extends Table {
       integer().withDefault(const Constant(120))();
   TextColumn get activePresetId =>
       text().nullable().withDefault(const Constant('preset-classic'))();
+  BoolColumn get autoStartNextSession =>
+      boolean().withDefault(const Constant(false))();
+  BoolColumn get soundEnabled => boolean().withDefault(const Constant(true))();
+  BoolColumn get hapticEnabled => boolean().withDefault(const Constant(true))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -74,7 +80,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -92,6 +98,25 @@ class AppDatabase extends _$AppDatabase {
           userSettingsEntries.activePresetId,
         );
         await m.createTable(timerPresetEntries);
+      }
+      if (from < 5) {
+        await m.addColumn(
+          focusSessionEntries,
+          focusSessionEntries.distractionCount,
+        );
+        await m.addColumn(focusSessionEntries, focusSessionEntries.status);
+        await m.addColumn(
+          userSettingsEntries,
+          userSettingsEntries.autoStartNextSession,
+        );
+        await m.addColumn(
+          userSettingsEntries,
+          userSettingsEntries.soundEnabled,
+        );
+        await m.addColumn(
+          userSettingsEntries,
+          userSettingsEntries.hapticEnabled,
+        );
       }
     },
   );
