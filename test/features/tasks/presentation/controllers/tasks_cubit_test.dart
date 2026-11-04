@@ -86,5 +86,40 @@ void main() {
       cubit.setFilter(TasksFilter.completed);
       expect(cubit.state.filter, TasksFilter.completed);
     });
+
+    test('updateTask updates task in repository', () async {
+      repository.emitTasks([testTask]);
+      await pumpEventQueue();
+
+      final updated = testTask.copyWith(
+        title: 'Updated Title',
+        category: 'Study',
+        estimatedMinutes: 45,
+      );
+      await cubit.updateTask(updated);
+
+      expect(repository.tasks.first.title, 'Updated Title');
+      expect(repository.tasks.first.category, 'Study');
+      expect(repository.tasks.first.estimatedMinutes, 45);
+    });
+
+    test(
+      'addSubtask, toggleSubtask, and deleteSubtask delegate to repository',
+      () async {
+        repository.emitTasks([testTask]);
+        await pumpEventQueue();
+
+        await cubit.addSubtask(testTask.id, 'Sub 1');
+        expect(repository.tasks.first.subtasks.length, 1);
+        expect(repository.tasks.first.subtasks.first.title, 'Sub 1');
+
+        final subId = repository.tasks.first.subtasks.first.id;
+        await cubit.toggleSubtask(subId);
+        expect(repository.tasks.first.subtasks.first.isCompleted, isTrue);
+
+        await cubit.deleteSubtask(subId);
+        expect(repository.tasks.first.subtasks, isEmpty);
+      },
+    );
   });
 }

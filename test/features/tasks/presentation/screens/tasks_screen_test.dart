@@ -80,7 +80,30 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('New Task'), findsOneWidget);
-      expect(find.text('Save Task'), findsOneWidget);
+      expect(find.text('Create Task'), findsOneWidget);
+    });
+
+    testWidgets('tapping a task opens edit sheet with subtasks and details', (
+      tester,
+    ) async {
+      final task1 = Task(
+        id: 't-1',
+        title: 'Complete homework',
+        category: 'Study',
+        priority: TaskPriority.high,
+        createdAt: DateTime(2026, 11, 1),
+      );
+
+      repository.emitTasks([task1]);
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Complete homework'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Edit Task'), findsOneWidget);
+      expect(find.text('Save Changes'), findsOneWidget);
+      expect(find.text('Subtasks (0/0)'), findsOneWidget);
     });
   });
 }

@@ -44,6 +44,10 @@ class TasksCubit extends Cubit<TasksState> {
     String? description,
     TaskPriority priority = TaskPriority.medium,
     DateTime? dueDate,
+    String? category,
+    List<String> tags = const [],
+    int? estimatedMinutes,
+    String? recurrenceRule,
   }) async {
     try {
       final task = Task.create(
@@ -51,6 +55,10 @@ class TasksCubit extends Cubit<TasksState> {
         description: description,
         priority: priority,
         dueDate: dueDate,
+        category: category,
+        tags: tags,
+        estimatedMinutes: estimatedMinutes,
+        recurrenceRule: recurrenceRule,
       );
       await _taskRepository.saveTask(task);
     } catch (e) {
@@ -58,6 +66,58 @@ class TasksCubit extends Cubit<TasksState> {
         state.copyWith(
           status: TasksStatus.failure,
           errorMessage: 'Failed to add task: ${e.toString()}',
+        ),
+      );
+    }
+  }
+
+  Future<void> updateTask(Task task) async {
+    try {
+      await _taskRepository.saveTask(task);
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: TasksStatus.failure,
+          errorMessage: 'Failed to update task: ${e.toString()}',
+        ),
+      );
+    }
+  }
+
+  Future<void> addSubtask(String taskId, String title) async {
+    try {
+      await _taskRepository.addSubtask(taskId, title);
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: TasksStatus.failure,
+          errorMessage: 'Failed to add subtask: ${e.toString()}',
+        ),
+      );
+    }
+  }
+
+  Future<void> toggleSubtask(String subtaskId) async {
+    try {
+      await _taskRepository.toggleSubtaskCompletion(subtaskId);
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: TasksStatus.failure,
+          errorMessage: 'Failed to toggle subtask: ${e.toString()}',
+        ),
+      );
+    }
+  }
+
+  Future<void> deleteSubtask(String subtaskId) async {
+    try {
+      await _taskRepository.deleteSubtask(subtaskId);
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: TasksStatus.failure,
+          errorMessage: 'Failed to delete subtask: ${e.toString()}',
         ),
       );
     }
