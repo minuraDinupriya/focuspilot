@@ -27,6 +27,7 @@ void main() {
       expect(settings.shortBreakDurationMinutes, 5);
       expect(settings.longBreakDurationMinutes, 15);
       expect(settings.dailyGoalMinutes, 120);
+      expect(settings.weeklyGoalMinutes, 600);
     });
 
     test('saveSettings persists and retrieves updated settings', () async {
@@ -35,6 +36,7 @@ void main() {
         shortBreakDurationMinutes: 10,
         longBreakDurationMinutes: 20,
         dailyGoalMinutes: 180,
+        weeklyGoalMinutes: 900,
       );
 
       await repository.saveSettings(customSettings);
@@ -45,6 +47,7 @@ void main() {
       expect(retrieved.shortBreakDurationMinutes, 10);
       expect(retrieved.longBreakDurationMinutes, 20);
       expect(retrieved.dailyGoalMinutes, 180);
+      expect(retrieved.weeklyGoalMinutes, 900);
     });
 
     test(

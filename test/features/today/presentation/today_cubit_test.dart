@@ -197,5 +197,53 @@ void main() {
       );
       expect(activeDays.length, 2);
     });
+
+    test('calculates weekly focus minutes, best streak, and streak milestone badge', () async {
+      final now = DateTime.now();
+      final sessions = [
+        // 4 consecutive days of work sessions
+        FocusSession(
+          id: 's0',
+          mode: FocusMode.work,
+          completedAt: now,
+          durationSeconds: 7200, // 120 mins (hits daily goal!)
+        ),
+        FocusSession(
+          id: 's1',
+          mode: FocusMode.work,
+          completedAt: now.subtract(const Duration(days: 1)),
+          durationSeconds: 7200, // 120 mins
+        ),
+        FocusSession(
+          id: 's2',
+          mode: FocusMode.work,
+          completedAt: now.subtract(const Duration(days: 2)),
+          durationSeconds: 7200, // 120 mins
+        ),
+        FocusSession(
+          id: 's3',
+          mode: FocusMode.work,
+          completedAt: now.subtract(const Duration(days: 3)),
+          durationSeconds: 7200, // 120 mins
+        ),
+      ];
+
+      fakeSessionRepository.emitSessions(sessions);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(cubit.state.currentStreakDays, 4);
+      expect(cubit.state.bestStreakDays, 4);
+      expect(cubit.state.streakMilestoneBadge, '🚀 Momentum');
+      expect(cubit.state.nextStreakMilestone, 7);
+
+      expect(cubit.state.focusMinutesToday, 120);
+      expect(cubit.state.isDailyGoalAchieved, isTrue);
+
+      expect(cubit.state.focusMinutesThisWeek, 480);
+      expect(cubit.state.weeklyGoalMinutes, 600);
+      expect(cubit.state.weeklyGoalProgress, closeTo(480 / 600, 0.001));
+      expect(cubit.state.daysGoalMetThisWeek, 4);
+      expect(cubit.state.isWeeklyGoalAchieved, isFalse);
+    });
   });
 }
