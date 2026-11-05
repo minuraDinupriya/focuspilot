@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:focuspilot/features/settings/domain/models/app_theme_mode.dart';
 
 class UserSettings extends Equatable {
   const UserSettings({
@@ -11,6 +12,7 @@ class UserSettings extends Equatable {
     this.autoStartNextSession = false,
     this.soundEnabled = true,
     this.hapticEnabled = true,
+    this.themeMode = AppThemeMode.system,
   });
 
   final int workDurationMinutes;
@@ -22,6 +24,7 @@ class UserSettings extends Equatable {
   final bool autoStartNextSession;
   final bool soundEnabled;
   final bool hapticEnabled;
+  final AppThemeMode themeMode;
 
   int get workDurationSeconds => workDurationMinutes * 60;
   int get shortBreakDurationSeconds => shortBreakDurationMinutes * 60;
@@ -38,6 +41,7 @@ class UserSettings extends Equatable {
     bool? autoStartNextSession,
     bool? soundEnabled,
     bool? hapticEnabled,
+    AppThemeMode? themeMode,
   }) {
     return UserSettings(
       workDurationMinutes: workDurationMinutes ?? this.workDurationMinutes,
@@ -53,6 +57,7 @@ class UserSettings extends Equatable {
       autoStartNextSession: autoStartNextSession ?? this.autoStartNextSession,
       soundEnabled: soundEnabled ?? this.soundEnabled,
       hapticEnabled: hapticEnabled ?? this.hapticEnabled,
+      themeMode: themeMode ?? this.themeMode,
     );
   }
 
@@ -67,5 +72,6 @@ class UserSettings extends Equatable {
     autoStartNextSession,
     soundEnabled,
     hapticEnabled,
+    themeMode,
   ];
 }

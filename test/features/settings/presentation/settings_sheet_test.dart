@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focuspilot/features/settings/data/repositories/in_memory_settings_repository.dart';
+import 'package:focuspilot/features/settings/domain/models/app_theme_mode.dart';
 import 'package:focuspilot/features/settings/presentation/controllers/settings_cubit.dart';
 import 'package:focuspilot/features/settings/presentation/widgets/settings_sheet.dart';
 
@@ -116,6 +117,27 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(cubit.state.settings.autoStartNextSession, isTrue);
+    });
+
+    testWidgets('tapping Dark theme option in Appearance updates themeMode', (
+      tester,
+    ) async {
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pumpAndSettle();
+
+      final segmentedButtonFinder = find.byKey(
+        const Key('theme_mode_segmented_button'),
+      );
+      await tester.scrollUntilVisible(segmentedButtonFinder, 200);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Appearance'), findsOneWidget);
+      expect(find.text('Dark'), findsOneWidget);
+
+      await tester.tap(find.text('Dark'));
+      await tester.pumpAndSettle();
+
+      expect(cubit.state.settings.themeMode, AppThemeMode.dark);
     });
   });
 }

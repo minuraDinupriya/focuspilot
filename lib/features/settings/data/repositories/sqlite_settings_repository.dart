@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:focuspilot/features/settings/domain/models/app_theme_mode.dart';
 import 'package:focuspilot/features/settings/domain/models/timer_preset.dart';
 import 'package:focuspilot/features/settings/domain/models/user_settings.dart';
 import 'package:focuspilot/features/settings/domain/repositories/settings_repository.dart';
@@ -52,6 +53,7 @@ class SqliteSettingsRepository implements SettingsRepository {
             autoStartNextSession: Value(settings.autoStartNextSession),
             soundEnabled: Value(settings.soundEnabled),
             hapticEnabled: Value(settings.hapticEnabled),
+            themeMode: Value(settings.themeMode.name),
           ),
         );
   }
@@ -130,6 +132,7 @@ class SqliteSettingsRepository implements SettingsRepository {
       autoStartNextSession: entry.autoStartNextSession,
       soundEnabled: entry.soundEnabled,
       hapticEnabled: entry.hapticEnabled,
+      themeMode: AppThemeMode.fromString(entry.themeMode),
     );
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:focuspilot/features/settings/domain/models/app_theme_mode.dart';
 import 'package:focuspilot/features/settings/presentation/controllers/settings_cubit.dart';
 
 class SettingsSheet extends StatelessWidget {
@@ -306,7 +307,47 @@ class SettingsSheet extends StatelessWidget {
                   );
                 },
               ),
+              const SizedBox(height: 16),
+              const Divider(),
               const SizedBox(height: 12),
+
+              // Appearance / Theme Section (FOC-36)
+              Text(
+                'Appearance',
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Customize how FocusPilot looks on your device',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<AppThemeMode>(
+                  key: const Key('theme_mode_segmented_button'),
+                  segments: AppThemeMode.values.map((mode) {
+                    return ButtonSegment<AppThemeMode>(
+                      value: mode,
+                      label: Text(mode.displayName),
+                      icon: Icon(mode.icon, size: 18),
+                    );
+                  }).toList(),
+                  selected: {settings.themeMode},
+                  onSelectionChanged: (selected) {
+                    if (selected.isNotEmpty) {
+                      context.read<SettingsCubit>().updateThemeMode(
+                        selected.first,
+                      );
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
             ],
           ),
         );

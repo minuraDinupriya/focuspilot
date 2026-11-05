@@ -1762,6 +1762,18 @@ class $UserSettingsEntriesTable extends UserSettingsEntries
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _themeModeMeta = const VerificationMeta(
+    'themeMode',
+  );
+  @override
+  late final GeneratedColumn<String> themeMode = GeneratedColumn<String>(
+    'theme_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('system'),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1774,6 +1786,7 @@ class $UserSettingsEntriesTable extends UserSettingsEntries
     autoStartNextSession,
     soundEnabled,
     hapticEnabled,
+    themeMode,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1873,6 +1886,12 @@ class $UserSettingsEntriesTable extends UserSettingsEntries
         ),
       );
     }
+    if (data.containsKey('theme_mode')) {
+      context.handle(
+        _themeModeMeta,
+        themeMode.isAcceptableOrUnknown(data['theme_mode']!, _themeModeMeta),
+      );
+    }
     return context;
   }
 
@@ -1922,6 +1941,10 @@ class $UserSettingsEntriesTable extends UserSettingsEntries
         DriftSqlType.bool,
         data['${effectivePrefix}haptic_enabled'],
       )!,
+      themeMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}theme_mode'],
+      )!,
     );
   }
 
@@ -1943,6 +1966,7 @@ class UserSettingsEntry extends DataClass
   final bool autoStartNextSession;
   final bool soundEnabled;
   final bool hapticEnabled;
+  final String themeMode;
   const UserSettingsEntry({
     required this.id,
     required this.workDurationMinutes,
@@ -1954,6 +1978,7 @@ class UserSettingsEntry extends DataClass
     required this.autoStartNextSession,
     required this.soundEnabled,
     required this.hapticEnabled,
+    required this.themeMode,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1974,6 +1999,7 @@ class UserSettingsEntry extends DataClass
     map['auto_start_next_session'] = Variable<bool>(autoStartNextSession);
     map['sound_enabled'] = Variable<bool>(soundEnabled);
     map['haptic_enabled'] = Variable<bool>(hapticEnabled);
+    map['theme_mode'] = Variable<String>(themeMode);
     return map;
   }
 
@@ -1991,6 +2017,7 @@ class UserSettingsEntry extends DataClass
       autoStartNextSession: Value(autoStartNextSession),
       soundEnabled: Value(soundEnabled),
       hapticEnabled: Value(hapticEnabled),
+      themeMode: Value(themeMode),
     );
   }
 
@@ -2018,6 +2045,7 @@ class UserSettingsEntry extends DataClass
       ),
       soundEnabled: serializer.fromJson<bool>(json['soundEnabled']),
       hapticEnabled: serializer.fromJson<bool>(json['hapticEnabled']),
+      themeMode: serializer.fromJson<String>(json['themeMode']),
     );
   }
   @override
@@ -2038,6 +2066,7 @@ class UserSettingsEntry extends DataClass
       'autoStartNextSession': serializer.toJson<bool>(autoStartNextSession),
       'soundEnabled': serializer.toJson<bool>(soundEnabled),
       'hapticEnabled': serializer.toJson<bool>(hapticEnabled),
+      'themeMode': serializer.toJson<String>(themeMode),
     };
   }
 
@@ -2052,6 +2081,7 @@ class UserSettingsEntry extends DataClass
     bool? autoStartNextSession,
     bool? soundEnabled,
     bool? hapticEnabled,
+    String? themeMode,
   }) => UserSettingsEntry(
     id: id ?? this.id,
     workDurationMinutes: workDurationMinutes ?? this.workDurationMinutes,
@@ -2067,6 +2097,7 @@ class UserSettingsEntry extends DataClass
     autoStartNextSession: autoStartNextSession ?? this.autoStartNextSession,
     soundEnabled: soundEnabled ?? this.soundEnabled,
     hapticEnabled: hapticEnabled ?? this.hapticEnabled,
+    themeMode: themeMode ?? this.themeMode,
   );
   UserSettingsEntry copyWithCompanion(UserSettingsEntriesCompanion data) {
     return UserSettingsEntry(
@@ -2098,6 +2129,7 @@ class UserSettingsEntry extends DataClass
       hapticEnabled: data.hapticEnabled.present
           ? data.hapticEnabled.value
           : this.hapticEnabled,
+      themeMode: data.themeMode.present ? data.themeMode.value : this.themeMode,
     );
   }
 
@@ -2113,7 +2145,8 @@ class UserSettingsEntry extends DataClass
           ..write('activePresetId: $activePresetId, ')
           ..write('autoStartNextSession: $autoStartNextSession, ')
           ..write('soundEnabled: $soundEnabled, ')
-          ..write('hapticEnabled: $hapticEnabled')
+          ..write('hapticEnabled: $hapticEnabled, ')
+          ..write('themeMode: $themeMode')
           ..write(')'))
         .toString();
   }
@@ -2130,6 +2163,7 @@ class UserSettingsEntry extends DataClass
     autoStartNextSession,
     soundEnabled,
     hapticEnabled,
+    themeMode,
   );
   @override
   bool operator ==(Object other) =>
@@ -2144,7 +2178,8 @@ class UserSettingsEntry extends DataClass
           other.activePresetId == this.activePresetId &&
           other.autoStartNextSession == this.autoStartNextSession &&
           other.soundEnabled == this.soundEnabled &&
-          other.hapticEnabled == this.hapticEnabled);
+          other.hapticEnabled == this.hapticEnabled &&
+          other.themeMode == this.themeMode);
 }
 
 class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
@@ -2158,6 +2193,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
   final Value<bool> autoStartNextSession;
   final Value<bool> soundEnabled;
   final Value<bool> hapticEnabled;
+  final Value<String> themeMode;
   final Value<int> rowid;
   const UserSettingsEntriesCompanion({
     this.id = const Value.absent(),
@@ -2170,6 +2206,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
     this.autoStartNextSession = const Value.absent(),
     this.soundEnabled = const Value.absent(),
     this.hapticEnabled = const Value.absent(),
+    this.themeMode = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   UserSettingsEntriesCompanion.insert({
@@ -2183,6 +2220,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
     this.autoStartNextSession = const Value.absent(),
     this.soundEnabled = const Value.absent(),
     this.hapticEnabled = const Value.absent(),
+    this.themeMode = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id);
   static Insertable<UserSettingsEntry> custom({
@@ -2196,6 +2234,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
     Expression<bool>? autoStartNextSession,
     Expression<bool>? soundEnabled,
     Expression<bool>? hapticEnabled,
+    Expression<String>? themeMode,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2213,6 +2252,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
         'auto_start_next_session': autoStartNextSession,
       if (soundEnabled != null) 'sound_enabled': soundEnabled,
       if (hapticEnabled != null) 'haptic_enabled': hapticEnabled,
+      if (themeMode != null) 'theme_mode': themeMode,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2228,6 +2268,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
     Value<bool>? autoStartNextSession,
     Value<bool>? soundEnabled,
     Value<bool>? hapticEnabled,
+    Value<String>? themeMode,
     Value<int>? rowid,
   }) {
     return UserSettingsEntriesCompanion(
@@ -2243,6 +2284,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
       autoStartNextSession: autoStartNextSession ?? this.autoStartNextSession,
       soundEnabled: soundEnabled ?? this.soundEnabled,
       hapticEnabled: hapticEnabled ?? this.hapticEnabled,
+      themeMode: themeMode ?? this.themeMode,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2286,6 +2328,9 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
     if (hapticEnabled.present) {
       map['haptic_enabled'] = Variable<bool>(hapticEnabled.value);
     }
+    if (themeMode.present) {
+      map['theme_mode'] = Variable<String>(themeMode.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2305,6 +2350,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
           ..write('autoStartNextSession: $autoStartNextSession, ')
           ..write('soundEnabled: $soundEnabled, ')
           ..write('hapticEnabled: $hapticEnabled, ')
+          ..write('themeMode: $themeMode, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3927,6 +3973,7 @@ typedef $$UserSettingsEntriesTableCreateCompanionBuilder =
       Value<bool> autoStartNextSession,
       Value<bool> soundEnabled,
       Value<bool> hapticEnabled,
+      Value<String> themeMode,
       Value<int> rowid,
     });
 typedef $$UserSettingsEntriesTableUpdateCompanionBuilder =
@@ -3941,6 +3988,7 @@ typedef $$UserSettingsEntriesTableUpdateCompanionBuilder =
       Value<bool> autoStartNextSession,
       Value<bool> soundEnabled,
       Value<bool> hapticEnabled,
+      Value<String> themeMode,
       Value<int> rowid,
     });
 
@@ -4000,6 +4048,11 @@ class $$UserSettingsEntriesTableFilterComposer
 
   ColumnFilters<bool> get hapticEnabled => $composableBuilder(
     column: $table.hapticEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get themeMode => $composableBuilder(
+    column: $table.themeMode,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -4062,6 +4115,11 @@ class $$UserSettingsEntriesTableOrderingComposer
     column: $table.hapticEnabled,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get themeMode => $composableBuilder(
+    column: $table.themeMode,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$UserSettingsEntriesTableAnnotationComposer
@@ -4120,6 +4178,9 @@ class $$UserSettingsEntriesTableAnnotationComposer
     column: $table.hapticEnabled,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get themeMode =>
+      $composableBuilder(column: $table.themeMode, builder: (column) => column);
 }
 
 class $$UserSettingsEntriesTableTableManager
@@ -4175,6 +4236,7 @@ class $$UserSettingsEntriesTableTableManager
                 Value<bool> autoStartNextSession = const Value.absent(),
                 Value<bool> soundEnabled = const Value.absent(),
                 Value<bool> hapticEnabled = const Value.absent(),
+                Value<String> themeMode = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => UserSettingsEntriesCompanion(
                 id: id,
@@ -4187,6 +4249,7 @@ class $$UserSettingsEntriesTableTableManager
                 autoStartNextSession: autoStartNextSession,
                 soundEnabled: soundEnabled,
                 hapticEnabled: hapticEnabled,
+                themeMode: themeMode,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -4201,6 +4264,7 @@ class $$UserSettingsEntriesTableTableManager
                 Value<bool> autoStartNextSession = const Value.absent(),
                 Value<bool> soundEnabled = const Value.absent(),
                 Value<bool> hapticEnabled = const Value.absent(),
+                Value<String> themeMode = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => UserSettingsEntriesCompanion.insert(
                 id: id,
@@ -4213,6 +4277,7 @@ class $$UserSettingsEntriesTableTableManager
                 autoStartNextSession: autoStartNextSession,
                 soundEnabled: soundEnabled,
                 hapticEnabled: hapticEnabled,
+                themeMode: themeMode,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

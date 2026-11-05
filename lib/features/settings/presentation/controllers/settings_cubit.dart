@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:focuspilot/features/settings/domain/models/app_theme_mode.dart';
 import 'package:focuspilot/features/settings/domain/models/timer_preset.dart';
 import 'package:focuspilot/features/settings/domain/models/user_settings.dart';
 import 'package:focuspilot/features/settings/domain/repositories/settings_repository.dart';
@@ -112,6 +113,11 @@ class SettingsCubit extends Cubit<SettingsState> {
         );
       }
     }
+  }
+
+  Future<void> updateThemeMode(AppThemeMode themeMode) async {
+    final updated = state.settings.copyWith(themeMode: themeMode);
+    await updateSettings(updated);
   }
 
   Future<void> selectPreset(TimerPreset preset) async {
