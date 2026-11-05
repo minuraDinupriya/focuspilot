@@ -77,6 +77,17 @@ class FakeTaskRepository implements TaskRepository {
   }
 
   @override
+  Future<void> addActualMinutes(String taskId, int minutes) async {
+    final task = await getTaskById(taskId);
+    if (task != null) {
+      final updated = task.copyWith(
+        actualMinutes: task.actualMinutes + minutes,
+      );
+      await saveTask(updated);
+    }
+  }
+
+  @override
   Future<void> addSubtask(String taskId, String title) async {
     final task = await getTaskById(taskId);
     if (task == null) return;

@@ -9,6 +9,7 @@ import 'package:focuspilot/features/focus/presentation/focus_screen.dart';
 import 'package:focuspilot/features/focus/presentation/widgets/circular_timer_display.dart';
 import 'package:focuspilot/features/focus/presentation/widgets/focus_mode_selector.dart';
 import 'package:focuspilot/features/focus/presentation/widgets/timer_controls.dart';
+import 'package:focuspilot/features/tasks/domain/models/task.dart';
 import 'package:focuspilot/features/tasks/presentation/controllers/tasks_cubit.dart';
 
 import '../../../tasks/fakes/fake_task_repository.dart';
@@ -147,6 +148,38 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Distractions: 3 (+1)'), findsOneWidget);
+    });
+
+    testWidgets('displays linked task with actual and estimated minutes', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final task = Task(
+        id: 't-focus',
+        title: 'Study Data Structures',
+        createdAt: DateTime.now(),
+        estimatedMinutes: 50,
+        actualMinutes: 25,
+      );
+
+      final bloc = FocusBloc(
+        ticker: const TestTicker(),
+        sessionRepository: focusRepository,
+        initialState: FocusState(linkedTask: task),
+      );
+      addTearDown(bloc.close);
+
+      await tester.pumpWidget(createWidgetUnderTest(bloc));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Focusing: Study Data Structures (25m/50m)'),
+        findsOneWidget,
+      );
     });
   });
 }

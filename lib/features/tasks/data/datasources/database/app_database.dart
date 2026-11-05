@@ -19,6 +19,7 @@ class TaskEntries extends Table {
   TextColumn get category => text().nullable()();
   TextColumn get tags => text().withDefault(const Constant(''))();
   IntColumn get estimatedMinutes => integer().nullable()();
+  IntColumn get actualMinutes => integer().withDefault(const Constant(0))();
   TextColumn get recurrenceRule => text().nullable()();
 
   @override
@@ -97,7 +98,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -144,6 +145,9 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(taskEntries, taskEntries.estimatedMinutes);
         await m.addColumn(taskEntries, taskEntries.recurrenceRule);
         await m.createTable(subtaskEntries);
+      }
+      if (from < 7) {
+        await m.addColumn(taskEntries, taskEntries.actualMinutes);
       }
     },
   );

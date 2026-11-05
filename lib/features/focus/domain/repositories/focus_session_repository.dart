@@ -10,4 +10,6 @@ abstract class FocusSessionRepository {
   Future<int> getCompletedSessionsCountToday();
 
   Future<int> getTodayFocusMinutes();
+
+  Future<int> getTaskFocusMinutes(String taskId);
 }

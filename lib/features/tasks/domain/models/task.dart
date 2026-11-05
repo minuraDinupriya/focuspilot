@@ -17,6 +17,7 @@ class Task extends Equatable {
     this.category,
     this.tags = const [],
     this.estimatedMinutes,
+    this.actualMinutes = 0,
     this.recurrenceRule,
     this.subtasks = const [],
   });
@@ -32,6 +33,7 @@ class Task extends Equatable {
   final String? category;
   final List<String> tags;
   final int? estimatedMinutes;
+  final int actualMinutes;
   final String? recurrenceRule;
   final List<Subtask> subtasks;
 
@@ -45,6 +47,22 @@ class Task extends Equatable {
   bool get isOverdue {
     if (isCompleted || dueDate == null) return false;
     return dueDate!.isBefore(DateTime.now());
+  }
+
+  double? get timeProgress {
+    if (estimatedMinutes == null || estimatedMinutes! <= 0) return null;
+    return (actualMinutes / estimatedMinutes!).clamp(0.0, 1.0);
+  }
+
+  bool get isOverEstimated {
+    if (estimatedMinutes == null || estimatedMinutes! <= 0) return false;
+    return actualMinutes > estimatedMinutes!;
+  }
+
+  int get remainingEstimatedMinutes {
+    if (estimatedMinutes == null) return 0;
+    final diff = estimatedMinutes! - actualMinutes;
+    return diff > 0 ? diff : 0;
   }
 
   bool get isRecurring => recurrenceRule != null && recurrenceRule != 'none';
@@ -77,6 +95,7 @@ class Task extends Equatable {
       category: category,
       tags: tags,
       estimatedMinutes: estimatedMinutes,
+      actualMinutes: 0,
       recurrenceRule: recurrenceRule,
       subtasks: nextSubtasks,
     );
@@ -90,6 +109,7 @@ class Task extends Equatable {
     String? category,
     List<String> tags = const [],
     int? estimatedMinutes,
+    int actualMinutes = 0,
     String? recurrenceRule,
     List<Subtask> subtasks = const [],
   }) {
@@ -107,6 +127,7 @@ class Task extends Equatable {
       category: category?.trim().isEmpty ?? true ? null : category?.trim(),
       tags: tags,
       estimatedMinutes: estimatedMinutes,
+      actualMinutes: actualMinutes,
       recurrenceRule: recurrenceRule?.trim().isEmpty ?? true
           ? null
           : recurrenceRule?.trim(),
@@ -126,6 +147,7 @@ class Task extends Equatable {
     String? category,
     List<String>? tags,
     int? estimatedMinutes,
+    int? actualMinutes,
     String? recurrenceRule,
     List<Subtask>? subtasks,
     bool clearDescription = false,
@@ -149,6 +171,7 @@ class Task extends Equatable {
       estimatedMinutes: clearEstimatedMinutes
           ? null
           : (estimatedMinutes ?? this.estimatedMinutes),
+      actualMinutes: actualMinutes ?? this.actualMinutes,
       recurrenceRule: clearRecurrenceRule
           ? null
           : (recurrenceRule ?? this.recurrenceRule),
@@ -169,6 +192,7 @@ class Task extends Equatable {
     category,
     tags,
     estimatedMinutes,
+    actualMinutes,
     recurrenceRule,
     subtasks,
   ];

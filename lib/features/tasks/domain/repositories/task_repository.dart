@@ -13,6 +13,8 @@ abstract class TaskRepository {
 
   Future<void> toggleTaskCompletion(String id);
 
+  Future<void> addActualMinutes(String taskId, int minutes);
+
   Future<void> addSubtask(String taskId, String title);
 
   Future<void> toggleSubtaskCompletion(String subtaskId);

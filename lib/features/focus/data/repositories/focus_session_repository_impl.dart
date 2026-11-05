@@ -81,6 +81,19 @@ class FocusSessionRepositoryImpl implements FocusSessionRepository {
     return (totalSeconds / 60).round();
   }
 
+  @override
+  Future<int> getTaskFocusMinutes(String taskId) async {
+    final query = _database.select(_database.focusSessionEntries)
+      ..where(
+        (tbl) =>
+            tbl.taskId.equals(taskId) & tbl.mode.equals(FocusMode.work.name),
+      );
+
+    final rows = await query.get();
+    final totalSeconds = rows.fold<int>(0, (sum, s) => sum + s.durationSeconds);
+    return (totalSeconds / 60).round();
+  }
+
   FocusSession _toDomain(FocusSessionEntry entry) {
     return FocusSession(
       id: entry.id,

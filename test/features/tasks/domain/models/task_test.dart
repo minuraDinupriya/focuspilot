@@ -74,6 +74,51 @@ void main() {
       expect(updated.description, isNull);
       expect(updated.dueDate, isNull);
     });
+
+    test('timeProgress, isOverEstimated, and remainingEstimatedMinutes calculations', () {
+      final taskNoEstimate = Task.create(title: 'Task without estimate');
+      expect(taskNoEstimate.timeProgress, isNull);
+      expect(taskNoEstimate.isOverEstimated, isFalse);
+      expect(taskNoEstimate.remainingEstimatedMinutes, 0);
+
+      final taskInProgress = Task(
+        id: 't1',
+        title: 'In Progress',
+        createdAt: fixedDate,
+        estimatedMinutes: 60,
+        actualMinutes: 30,
+      );
+      expect(taskInProgress.timeProgress, 0.5);
+      expect(taskInProgress.isOverEstimated, isFalse);
+      expect(taskInProgress.remainingEstimatedMinutes, 30);
+
+      final taskOver = Task(
+        id: 't2',
+        title: 'Over Estimate',
+        createdAt: fixedDate,
+        estimatedMinutes: 60,
+        actualMinutes: 90,
+      );
+      expect(taskOver.timeProgress, 1.0); // clamped at 1.0
+      expect(taskOver.isOverEstimated, isTrue);
+      expect(taskOver.remainingEstimatedMinutes, 0);
+    });
+
+    test('createNextRecurringInstance resets actualMinutes to 0', () {
+      final recurringTask = Task(
+        id: 't-rec',
+        title: 'Weekly Standup',
+        createdAt: fixedDate,
+        estimatedMinutes: 30,
+        actualMinutes: 45,
+        recurrenceRule: 'weekly',
+      );
+
+      final nextInstance = recurringTask.createNextRecurringInstance();
+      expect(nextInstance, isNotNull);
+      expect(nextInstance!.actualMinutes, 0);
+      expect(nextInstance.estimatedMinutes, 30);
+    });
   });
 
   group('TaskPriority enum', () {

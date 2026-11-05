@@ -8,7 +8,9 @@ import 'package:focuspilot/features/focus/presentation/controllers/focus_event.d
 import 'package:focuspilot/features/focus/presentation/controllers/focus_state.dart';
 import 'package:focuspilot/features/settings/data/repositories/in_memory_settings_repository.dart';
 import 'package:focuspilot/features/settings/domain/models/user_settings.dart';
+import 'package:focuspilot/features/tasks/domain/models/task.dart';
 
+import '../../../tasks/fakes/fake_task_repository.dart';
 import '../../fakes/fake_focus_session_repository.dart';
 
 class FakeTicker extends Ticker {
@@ -316,5 +318,83 @@ void main() {
         settingsRepo.dispose();
       },
     );
+
+    test('Session completion updates actualMinutes on linkedTask in taskRepository and state', () async {
+      final taskRepo = FakeTaskRepository();
+      final testTask = Task.create(
+        title: 'Math Homework',
+        estimatedMinutes: 60,
+      );
+      await taskRepo.saveTask(testTask);
+
+      final taskBloc = FocusBloc(
+        ticker: const FakeTicker(stream: Stream.empty()),
+        sessionRepository: repository,
+        taskRepository: taskRepo,
+      );
+      await pumpEventQueue();
+
+      taskBloc.add(FocusTaskLinked(task: testTask));
+      await pumpEventQueue();
+
+      // Start 25-minute session
+      taskBloc.add(const FocusStarted(durationSeconds: 25 * 60));
+      await pumpEventQueue();
+
+      // Tick to 0 to complete session
+      taskBloc.add(const FocusTicked(durationSeconds: 0));
+      await pumpEventQueue();
+
+      // Task repository should have 25 minutes logged
+      final updatedTask = await taskRepo.getTaskById(testTask.id);
+      expect(updatedTask, isNotNull);
+      expect(updatedTask!.actualMinutes, 25);
+      expect(taskBloc.state.linkedTask?.actualMinutes, 25);
+
+      await taskBloc.close();
+      taskRepo.dispose();
+    });
+
+    test('Skipping session with elapsed focus time attributes minutes to linked task', () async {
+      final taskRepo = FakeTaskRepository();
+      final testTask = Task.create(
+        title: 'Writing Paper',
+        estimatedMinutes: 45,
+      );
+      await taskRepo.saveTask(testTask);
+
+      var fakeNow = DateTime(2026, 11, 5, 10, 0);
+      final taskBloc = FocusBloc(
+        ticker: const FakeTicker(stream: Stream.empty()),
+        sessionRepository: repository,
+        taskRepository: taskRepo,
+        now: () => fakeNow,
+      );
+      await pumpEventQueue();
+
+      taskBloc.add(FocusTaskLinked(task: testTask));
+      await pumpEventQueue();
+
+      // Start 25-minute session
+      taskBloc.add(const FocusStarted(durationSeconds: 25 * 60));
+      await pumpEventQueue();
+
+      // Advance simulated time by 10 minutes
+      fakeNow = fakeNow.add(const Duration(minutes: 10));
+      taskBloc.add(const FocusTicked());
+      await pumpEventQueue();
+
+      // Skip session
+      taskBloc.add(const FocusSkipped());
+      await pumpEventQueue();
+
+      final updatedTask = await taskRepo.getTaskById(testTask.id);
+      expect(updatedTask, isNotNull);
+      expect(updatedTask!.actualMinutes, 10);
+      expect(taskBloc.state.linkedTask?.actualMinutes, 10);
+
+      await taskBloc.close();
+      taskRepo.dispose();
+    });
   });
 }

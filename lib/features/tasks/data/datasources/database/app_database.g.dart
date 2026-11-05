@@ -134,6 +134,18 @@ class $TaskEntriesTable extends TaskEntries
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _actualMinutesMeta = const VerificationMeta(
+    'actualMinutes',
+  );
+  @override
+  late final GeneratedColumn<int> actualMinutes = GeneratedColumn<int>(
+    'actual_minutes',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _recurrenceRuleMeta = const VerificationMeta(
     'recurrenceRule',
   );
@@ -158,6 +170,7 @@ class $TaskEntriesTable extends TaskEntries
     category,
     tags,
     estimatedMinutes,
+    actualMinutes,
     recurrenceRule,
   ];
   @override
@@ -253,6 +266,15 @@ class $TaskEntriesTable extends TaskEntries
         ),
       );
     }
+    if (data.containsKey('actual_minutes')) {
+      context.handle(
+        _actualMinutesMeta,
+        actualMinutes.isAcceptableOrUnknown(
+          data['actual_minutes']!,
+          _actualMinutesMeta,
+        ),
+      );
+    }
     if (data.containsKey('recurrence_rule')) {
       context.handle(
         _recurrenceRuleMeta,
@@ -315,6 +337,10 @@ class $TaskEntriesTable extends TaskEntries
         DriftSqlType.int,
         data['${effectivePrefix}estimated_minutes'],
       ),
+      actualMinutes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}actual_minutes'],
+      )!,
       recurrenceRule: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}recurrence_rule'],
@@ -340,6 +366,7 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
   final String? category;
   final String tags;
   final int? estimatedMinutes;
+  final int actualMinutes;
   final String? recurrenceRule;
   const TaskEntry({
     required this.id,
@@ -353,6 +380,7 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
     this.category,
     required this.tags,
     this.estimatedMinutes,
+    required this.actualMinutes,
     this.recurrenceRule,
   });
   @override
@@ -379,6 +407,7 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
     if (!nullToAbsent || estimatedMinutes != null) {
       map['estimated_minutes'] = Variable<int>(estimatedMinutes);
     }
+    map['actual_minutes'] = Variable<int>(actualMinutes);
     if (!nullToAbsent || recurrenceRule != null) {
       map['recurrence_rule'] = Variable<String>(recurrenceRule);
     }
@@ -408,6 +437,7 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
       estimatedMinutes: estimatedMinutes == null && nullToAbsent
           ? const Value.absent()
           : Value(estimatedMinutes),
+      actualMinutes: Value(actualMinutes),
       recurrenceRule: recurrenceRule == null && nullToAbsent
           ? const Value.absent()
           : Value(recurrenceRule),
@@ -431,6 +461,7 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
       category: serializer.fromJson<String?>(json['category']),
       tags: serializer.fromJson<String>(json['tags']),
       estimatedMinutes: serializer.fromJson<int?>(json['estimatedMinutes']),
+      actualMinutes: serializer.fromJson<int>(json['actualMinutes']),
       recurrenceRule: serializer.fromJson<String?>(json['recurrenceRule']),
     );
   }
@@ -449,6 +480,7 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
       'category': serializer.toJson<String?>(category),
       'tags': serializer.toJson<String>(tags),
       'estimatedMinutes': serializer.toJson<int?>(estimatedMinutes),
+      'actualMinutes': serializer.toJson<int>(actualMinutes),
       'recurrenceRule': serializer.toJson<String?>(recurrenceRule),
     };
   }
@@ -465,6 +497,7 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
     Value<String?> category = const Value.absent(),
     String? tags,
     Value<int?> estimatedMinutes = const Value.absent(),
+    int? actualMinutes,
     Value<String?> recurrenceRule = const Value.absent(),
   }) => TaskEntry(
     id: id ?? this.id,
@@ -480,6 +513,7 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
     estimatedMinutes: estimatedMinutes.present
         ? estimatedMinutes.value
         : this.estimatedMinutes,
+    actualMinutes: actualMinutes ?? this.actualMinutes,
     recurrenceRule: recurrenceRule.present
         ? recurrenceRule.value
         : this.recurrenceRule,
@@ -505,6 +539,9 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
       estimatedMinutes: data.estimatedMinutes.present
           ? data.estimatedMinutes.value
           : this.estimatedMinutes,
+      actualMinutes: data.actualMinutes.present
+          ? data.actualMinutes.value
+          : this.actualMinutes,
       recurrenceRule: data.recurrenceRule.present
           ? data.recurrenceRule.value
           : this.recurrenceRule,
@@ -525,6 +562,7 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
           ..write('category: $category, ')
           ..write('tags: $tags, ')
           ..write('estimatedMinutes: $estimatedMinutes, ')
+          ..write('actualMinutes: $actualMinutes, ')
           ..write('recurrenceRule: $recurrenceRule')
           ..write(')'))
         .toString();
@@ -543,6 +581,7 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
     category,
     tags,
     estimatedMinutes,
+    actualMinutes,
     recurrenceRule,
   );
   @override
@@ -560,6 +599,7 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
           other.category == this.category &&
           other.tags == this.tags &&
           other.estimatedMinutes == this.estimatedMinutes &&
+          other.actualMinutes == this.actualMinutes &&
           other.recurrenceRule == this.recurrenceRule);
 }
 
@@ -575,6 +615,7 @@ class TaskEntriesCompanion extends UpdateCompanion<TaskEntry> {
   final Value<String?> category;
   final Value<String> tags;
   final Value<int?> estimatedMinutes;
+  final Value<int> actualMinutes;
   final Value<String?> recurrenceRule;
   final Value<int> rowid;
   const TaskEntriesCompanion({
@@ -589,6 +630,7 @@ class TaskEntriesCompanion extends UpdateCompanion<TaskEntry> {
     this.category = const Value.absent(),
     this.tags = const Value.absent(),
     this.estimatedMinutes = const Value.absent(),
+    this.actualMinutes = const Value.absent(),
     this.recurrenceRule = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -604,6 +646,7 @@ class TaskEntriesCompanion extends UpdateCompanion<TaskEntry> {
     this.category = const Value.absent(),
     this.tags = const Value.absent(),
     this.estimatedMinutes = const Value.absent(),
+    this.actualMinutes = const Value.absent(),
     this.recurrenceRule = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -621,6 +664,7 @@ class TaskEntriesCompanion extends UpdateCompanion<TaskEntry> {
     Expression<String>? category,
     Expression<String>? tags,
     Expression<int>? estimatedMinutes,
+    Expression<int>? actualMinutes,
     Expression<String>? recurrenceRule,
     Expression<int>? rowid,
   }) {
@@ -636,6 +680,7 @@ class TaskEntriesCompanion extends UpdateCompanion<TaskEntry> {
       if (category != null) 'category': category,
       if (tags != null) 'tags': tags,
       if (estimatedMinutes != null) 'estimated_minutes': estimatedMinutes,
+      if (actualMinutes != null) 'actual_minutes': actualMinutes,
       if (recurrenceRule != null) 'recurrence_rule': recurrenceRule,
       if (rowid != null) 'rowid': rowid,
     });
@@ -653,6 +698,7 @@ class TaskEntriesCompanion extends UpdateCompanion<TaskEntry> {
     Value<String?>? category,
     Value<String>? tags,
     Value<int?>? estimatedMinutes,
+    Value<int>? actualMinutes,
     Value<String?>? recurrenceRule,
     Value<int>? rowid,
   }) {
@@ -668,6 +714,7 @@ class TaskEntriesCompanion extends UpdateCompanion<TaskEntry> {
       category: category ?? this.category,
       tags: tags ?? this.tags,
       estimatedMinutes: estimatedMinutes ?? this.estimatedMinutes,
+      actualMinutes: actualMinutes ?? this.actualMinutes,
       recurrenceRule: recurrenceRule ?? this.recurrenceRule,
       rowid: rowid ?? this.rowid,
     );
@@ -709,6 +756,9 @@ class TaskEntriesCompanion extends UpdateCompanion<TaskEntry> {
     if (estimatedMinutes.present) {
       map['estimated_minutes'] = Variable<int>(estimatedMinutes.value);
     }
+    if (actualMinutes.present) {
+      map['actual_minutes'] = Variable<int>(actualMinutes.value);
+    }
     if (recurrenceRule.present) {
       map['recurrence_rule'] = Variable<String>(recurrenceRule.value);
     }
@@ -732,6 +782,7 @@ class TaskEntriesCompanion extends UpdateCompanion<TaskEntry> {
           ..write('category: $category, ')
           ..write('tags: $tags, ')
           ..write('estimatedMinutes: $estimatedMinutes, ')
+          ..write('actualMinutes: $actualMinutes, ')
           ..write('recurrenceRule: $recurrenceRule, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -2762,6 +2813,7 @@ typedef $$TaskEntriesTableCreateCompanionBuilder =
       Value<String?> category,
       Value<String> tags,
       Value<int?> estimatedMinutes,
+      Value<int> actualMinutes,
       Value<String?> recurrenceRule,
       Value<int> rowid,
     });
@@ -2778,6 +2830,7 @@ typedef $$TaskEntriesTableUpdateCompanionBuilder =
       Value<String?> category,
       Value<String> tags,
       Value<int?> estimatedMinutes,
+      Value<int> actualMinutes,
       Value<String?> recurrenceRule,
       Value<int> rowid,
     });
@@ -2866,6 +2919,11 @@ class $$TaskEntriesTableFilterComposer
 
   ColumnFilters<int> get estimatedMinutes => $composableBuilder(
     column: $table.estimatedMinutes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get actualMinutes => $composableBuilder(
+    column: $table.actualMinutes,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2964,6 +3022,11 @@ class $$TaskEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get actualMinutes => $composableBuilder(
+    column: $table.actualMinutes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get recurrenceRule => $composableBuilder(
     column: $table.recurrenceRule,
     builder: (column) => ColumnOrderings(column),
@@ -3017,6 +3080,11 @@ class $$TaskEntriesTableAnnotationComposer
 
   GeneratedColumn<int> get estimatedMinutes => $composableBuilder(
     column: $table.estimatedMinutes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get actualMinutes => $composableBuilder(
+    column: $table.actualMinutes,
     builder: (column) => column,
   );
 
@@ -3090,6 +3158,7 @@ class $$TaskEntriesTableTableManager
                 Value<String?> category = const Value.absent(),
                 Value<String> tags = const Value.absent(),
                 Value<int?> estimatedMinutes = const Value.absent(),
+                Value<int> actualMinutes = const Value.absent(),
                 Value<String?> recurrenceRule = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TaskEntriesCompanion(
@@ -3104,6 +3173,7 @@ class $$TaskEntriesTableTableManager
                 category: category,
                 tags: tags,
                 estimatedMinutes: estimatedMinutes,
+                actualMinutes: actualMinutes,
                 recurrenceRule: recurrenceRule,
                 rowid: rowid,
               ),
@@ -3120,6 +3190,7 @@ class $$TaskEntriesTableTableManager
                 Value<String?> category = const Value.absent(),
                 Value<String> tags = const Value.absent(),
                 Value<int?> estimatedMinutes = const Value.absent(),
+                Value<int> actualMinutes = const Value.absent(),
                 Value<String?> recurrenceRule = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TaskEntriesCompanion.insert(
@@ -3134,6 +3205,7 @@ class $$TaskEntriesTableTableManager
                 category: category,
                 tags: tags,
                 estimatedMinutes: estimatedMinutes,
+                actualMinutes: actualMinutes,
                 recurrenceRule: recurrenceRule,
                 rowid: rowid,
               ),

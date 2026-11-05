@@ -275,6 +275,94 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
               ),
               const SizedBox(height: 16),
 
+              // Focus Time Tracking (Actual vs. Estimated)
+              if (widget.task != null &&
+                  (widget.task!.actualMinutes > 0 ||
+                      widget.task!.estimatedMinutes != null)) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.5,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: widget.task!.isOverEstimated
+                          ? theme.colorScheme.error.withValues(alpha: 0.5)
+                          : theme.colorScheme.outlineVariant,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.timelapse,
+                                size: 18,
+                                color: widget.task!.isOverEstimated
+                                    ? theme.colorScheme.error
+                                    : theme.colorScheme.primary,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Focus Progress',
+                                style: theme.textTheme.labelLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            widget.task!.estimatedMinutes != null
+                                ? '${widget.task!.actualMinutes}m / ${widget.task!.estimatedMinutes}m'
+                                : '${widget.task!.actualMinutes}m logged',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: widget.task!.isOverEstimated
+                                  ? theme.colorScheme.error
+                                  : null,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (widget.task!.timeProgress != null) ...[
+                        const SizedBox(height: 8),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: widget.task!.timeProgress,
+                            minHeight: 6,
+                            backgroundColor:
+                                theme.colorScheme.surfaceContainerHighest,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              widget.task!.isOverEstimated
+                                  ? theme.colorScheme.error
+                                  : theme.colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          widget.task!.isOverEstimated
+                              ? 'Exceeded estimate by ${widget.task!.actualMinutes - widget.task!.estimatedMinutes!} min'
+                              : '${widget.task!.remainingEstimatedMinutes} min remaining of estimate',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: widget.task!.isOverEstimated
+                                ? theme.colorScheme.error
+                                : theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
               // Estimated Focus Time
               Text('Estimated Focus Time', style: theme.textTheme.labelLarge),
               const SizedBox(height: 8),

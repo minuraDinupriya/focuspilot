@@ -51,6 +51,18 @@ class FakeFocusSessionRepository implements FocusSessionRepository {
     return (totalSeconds / 60).round();
   }
 
+  @override
+  Future<int> getTaskFocusMinutes(String taskId) async {
+    final taskSessions = _sessions.where((s) {
+      return s.taskId == taskId && s.mode == FocusMode.work;
+    });
+    final totalSeconds = taskSessions.fold<int>(
+      0,
+      (sum, s) => sum + s.durationSeconds,
+    );
+    return (totalSeconds / 60).round();
+  }
+
   void dispose() {
     _controller.close();
   }
