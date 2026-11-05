@@ -99,6 +99,7 @@ class _FocusPilotAppState extends State<FocusPilotApp> {
               ticker: const Ticker(),
               sessionRepository: _focusSessionRepository,
               settingsRepository: _settingsRepository,
+              taskRepository: _taskRepository,
             ),
           ),
         ],

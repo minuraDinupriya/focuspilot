@@ -120,6 +120,7 @@ void main() {
           category: 'Study',
           tags: const ['cs101', 'midterm'],
           estimatedMinutes: 90,
+          actualMinutes: 45,
           recurrenceRule: 'weekly',
           createdAt: DateTime(2026, 11, 4, 10, 0),
         );
@@ -131,9 +132,21 @@ void main() {
         expect(retrieved!.category, 'Study');
         expect(retrieved.tags, ['cs101', 'midterm']);
         expect(retrieved.estimatedMinutes, 90);
+        expect(retrieved.actualMinutes, 45);
         expect(retrieved.recurrenceRule, 'weekly');
       },
     );
+
+    test('addActualMinutes increments actualMinutes on task', () async {
+      await repository.saveTask(task1);
+      expect((await repository.getTaskById('task-1'))!.actualMinutes, 0);
+
+      await repository.addActualMinutes('task-1', 25);
+      expect((await repository.getTaskById('task-1'))!.actualMinutes, 25);
+
+      await repository.addActualMinutes('task-1', 25);
+      expect((await repository.getTaskById('task-1'))!.actualMinutes, 50);
+    });
 
     test(
       'addSubtask, toggleSubtaskCompletion, and deleteSubtask operations',

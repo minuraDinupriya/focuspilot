@@ -10,12 +10,15 @@ import 'package:focuspilot/features/focus/presentation/controllers/focus_event.d
 import 'package:focuspilot/features/focus/presentation/controllers/focus_state.dart';
 import 'package:focuspilot/features/settings/domain/models/user_settings.dart';
 import 'package:focuspilot/features/settings/domain/repositories/settings_repository.dart';
+import 'package:focuspilot/features/tasks/domain/models/task.dart';
+import 'package:focuspilot/features/tasks/domain/repositories/task_repository.dart';
 
 class FocusBloc extends Bloc<FocusEvent, FocusState> {
   FocusBloc({
     required this.ticker,
     required this.sessionRepository,
     this.settingsRepository,
+    this.taskRepository,
     DateTime Function()? now,
     FocusState? initialState,
   }) : now = now ?? DateTime.now,
@@ -45,6 +48,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
   final Ticker ticker;
   final FocusSessionRepository sessionRepository;
   final SettingsRepository? settingsRepository;
+  final TaskRepository? taskRepository;
   final DateTime Function() now;
   StreamSubscription<int>? _tickerSubscription;
   StreamSubscription<UserSettings>? _settingsSubscription;
@@ -126,6 +130,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
   Future<void> _onSkipped(FocusSkipped event, Emitter<FocusState> emit) async {
     await _tickerSubscription?.cancel();
 
+    Task? updatedTask = state.linkedTask;
     final elapsedSeconds = state.totalDurationSeconds - state.durationSeconds;
     if (elapsedSeconds > 0) {
       try {
@@ -137,6 +142,21 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
           status: SessionStatus.skipped,
         );
         await sessionRepository.saveSession(session);
+
+        if (state.mode == FocusMode.work &&
+            state.linkedTask != null &&
+            taskRepository != null) {
+          final minutes = (elapsedSeconds / 60).round();
+          if (minutes > 0) {
+            await taskRepository!.addActualMinutes(
+              state.linkedTask!.id,
+              minutes,
+            );
+            updatedTask = state.linkedTask!.copyWith(
+              actualMinutes: state.linkedTask!.actualMinutes + minutes,
+            );
+          }
+        }
       } catch (_) {}
     }
 
@@ -155,6 +175,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
           totalDurationSeconds: nextDuration,
           targetEndTime: target,
           distractionCount: 0,
+          linkedTask: updatedTask,
         ),
       );
       _tickerSubscription = ticker
@@ -169,6 +190,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
           totalDurationSeconds: nextDuration,
           clearTargetEndTime: true,
           distractionCount: 0,
+          linkedTask: updatedTask,
         ),
       );
     }
@@ -177,6 +199,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
   Future<void> _completeSession(Emitter<FocusState> emit) async {
     await _tickerSubscription?.cancel();
 
+    Task? updatedTask = state.linkedTask;
     try {
       final session = FocusSession.create(
         mode: state.mode,
@@ -186,6 +209,19 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
         status: SessionStatus.completed,
       );
       await sessionRepository.saveSession(session);
+
+      if (state.mode == FocusMode.work &&
+          state.linkedTask != null &&
+          taskRepository != null) {
+        final minutes = (state.totalDurationSeconds / 60).round();
+        if (minutes > 0) {
+          await taskRepository!.addActualMinutes(state.linkedTask!.id, minutes);
+          updatedTask = state.linkedTask!.copyWith(
+            actualMinutes: state.linkedTask!.actualMinutes + minutes,
+          );
+        }
+      }
+
       if (_settings.hapticEnabled) {
         HapticFeedback.vibrate();
       }
@@ -214,6 +250,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
           targetEndTime: target,
           distractionCount: 0,
           sessionsCompletedToday: count,
+          linkedTask: updatedTask,
         ),
       );
 
@@ -228,6 +265,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
           clearTargetEndTime: true,
           distractionCount: 0,
           sessionsCompletedToday: count,
+          linkedTask: updatedTask,
         ),
       );
     }

@@ -93,6 +93,7 @@ class TaskItemTile extends StatelessWidget {
                           task.subtasks.isNotEmpty ||
                           task.dueDate != null ||
                           task.estimatedMinutes != null ||
+                          task.actualMinutes > 0 ||
                           task.isRecurring) ...[
                         const SizedBox(height: 6),
                         Wrap(
@@ -210,26 +211,56 @@ class TaskItemTile extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                            if (task.estimatedMinutes != null)
+                            if (task.estimatedMinutes != null ||
+                                task.actualMinutes > 0)
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 6,
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color:
-                                      theme.colorScheme.surfaceContainerHighest,
+                                  color: task.isOverEstimated
+                                      ? theme.colorScheme.errorContainer
+                                      : theme
+                                            .colorScheme
+                                            .surfaceContainerHighest,
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
-                                  '⏱️ ${task.estimatedMinutes}m',
+                                  task.estimatedMinutes != null
+                                      ? (task.actualMinutes > 0
+                                            ? '⏱️ ${task.actualMinutes}m / ${task.estimatedMinutes}m'
+                                            : '⏱️ ${task.estimatedMinutes}m')
+                                      : '⏱️ ${task.actualMinutes}m logged',
                                   style: theme.textTheme.labelSmall?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
+                                    color: task.isOverEstimated
+                                        ? theme.colorScheme.onErrorContainer
+                                        : theme.colorScheme.onSurfaceVariant,
+                                    fontWeight: task.isOverEstimated
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
                                   ),
                                 ),
                               ),
                           ],
                         ),
+                        if (task.timeProgress != null) ...[
+                          const SizedBox(height: 6),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(2),
+                            child: LinearProgressIndicator(
+                              value: task.timeProgress,
+                              minHeight: 3,
+                              backgroundColor:
+                                  theme.colorScheme.surfaceContainerHighest,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                task.isOverEstimated
+                                    ? theme.colorScheme.error
+                                    : theme.colorScheme.primary,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ],
                   ),

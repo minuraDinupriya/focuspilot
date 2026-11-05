@@ -120,6 +120,7 @@ class TaskRepositoryImpl implements TaskRepository {
             category: Value(task.category),
             tags: Value(tagsString),
             estimatedMinutes: Value(task.estimatedMinutes),
+            actualMinutes: Value(task.actualMinutes),
             recurrenceRule: Value(task.recurrenceRule),
           ),
         );
@@ -170,6 +171,15 @@ class TaskRepositoryImpl implements TaskRepository {
         await saveTask(nextInstance);
       }
     }
+  }
+
+  @override
+  Future<void> addActualMinutes(String taskId, int minutes) async {
+    final task = await getTaskById(taskId);
+    if (task == null) return;
+
+    final updated = task.copyWith(actualMinutes: task.actualMinutes + minutes);
+    await saveTask(updated);
   }
 
   @override
@@ -234,6 +244,7 @@ class TaskRepositoryImpl implements TaskRepository {
       category: entry.category,
       tags: tagsList,
       estimatedMinutes: entry.estimatedMinutes,
+      actualMinutes: entry.actualMinutes,
       recurrenceRule: entry.recurrenceRule,
       subtasks: subtasks,
     );

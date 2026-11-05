@@ -89,5 +89,39 @@ void main() {
       expect(target.distractionCount, 4);
       expect(target.status, SessionStatus.skipped);
     });
+
+    test('getTaskFocusMinutes aggregates focus time linked to task', () async {
+      final sessionTask1 = FocusSession(
+        id: 's-task-1',
+        mode: FocusMode.work,
+        durationSeconds: 1500, // 25 mins
+        completedAt: DateTime.now(),
+        taskId: 'target-task',
+      );
+      final sessionTask2 = FocusSession(
+        id: 's-task-2',
+        mode: FocusMode.work,
+        durationSeconds: 1200, // 20 mins
+        completedAt: DateTime.now(),
+        taskId: 'target-task',
+      );
+      final sessionBreak = FocusSession(
+        id: 's-break',
+        mode: FocusMode.shortBreak,
+        durationSeconds: 300,
+        completedAt: DateTime.now(),
+        taskId: 'target-task',
+      );
+
+      await repository.saveSession(sessionTask1);
+      await repository.saveSession(sessionTask2);
+      await repository.saveSession(sessionBreak);
+
+      final totalMinutes = await repository.getTaskFocusMinutes('target-task');
+      expect(totalMinutes, 45); // 25 + 20 (break excluded)
+
+      final nonExistent = await repository.getTaskFocusMinutes('other-task');
+      expect(nonExistent, 0);
+    });
   });
 }

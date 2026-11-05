@@ -68,13 +68,33 @@ class FocusTaskSelector extends StatelessWidget {
                                   : null,
                             ),
                             title: Text(task.title),
-                            subtitle: task.description != null
-                                ? Text(
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (task.description != null)
+                                  Text(
                                     task.description!,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                  )
-                                : null,
+                                  ),
+                                if (task.estimatedMinutes != null ||
+                                    task.actualMinutes > 0)
+                                  Text(
+                                    task.estimatedMinutes != null
+                                        ? '⏱️ ${task.actualMinutes}m / ${task.estimatedMinutes}m'
+                                        : '⏱️ ${task.actualMinutes}m logged',
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: task.isOverEstimated
+                                              ? Theme.of(context)
+                                                    .colorScheme
+                                                    .error
+                                              : null,
+                                        ),
+                                  ),
+                              ],
+                            ),
                             onTap: () {
                               onTaskSelected(isSelected ? null : task);
                               Navigator.of(sheetContext).pop();
@@ -95,9 +115,14 @@ class FocusTaskSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (linkedTask != null) {
+      final timeInfo = linkedTask!.estimatedMinutes != null
+          ? ' (${linkedTask!.actualMinutes}m/${linkedTask!.estimatedMinutes}m)'
+          : (linkedTask!.actualMinutes > 0
+                ? ' (${linkedTask!.actualMinutes}m)'
+                : '');
       return InputChip(
         avatar: const Icon(Icons.task_alt, size: 18),
-        label: Text('Focusing: ${linkedTask!.title}'),
+        label: Text('Focusing: ${linkedTask!.title}$timeInfo'),
         onDeleted: () => onTaskSelected(null),
       );
     }
