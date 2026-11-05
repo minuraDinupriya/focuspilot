@@ -11,6 +11,7 @@ import 'package:focuspilot/features/tasks/domain/repositories/task_repository.da
 import 'package:focuspilot/features/today/domain/models/daily_focus_metric.dart';
 import 'package:focuspilot/features/today/domain/models/heatmap_day.dart';
 import 'package:focuspilot/features/today/domain/models/productivity_insight.dart';
+import 'package:focuspilot/features/today/domain/models/weekly_review_data.dart';
 import 'package:focuspilot/features/today/presentation/controllers/today_state.dart';
 
 class TodayCubit extends Cubit<TodayState> {
@@ -18,12 +19,19 @@ class TodayCubit extends Cubit<TodayState> {
     required FocusSessionRepository sessionRepository,
     required TaskRepository taskRepository,
     SettingsRepository? settingsRepository,
-  }) : this._(sessionRepository, taskRepository, settingsRepository);
+    DateTime Function()? nowProvider,
+  }) : this._(
+         sessionRepository,
+         taskRepository,
+         settingsRepository,
+         nowProvider ?? DateTime.now,
+       );
 
   TodayCubit._(
     this._sessionRepository,
     this._taskRepository,
     this._settingsRepository,
+    this._nowProvider,
   ) : super(const TodayState()) {
     _initSubscriptions();
   }
@@ -31,6 +39,7 @@ class TodayCubit extends Cubit<TodayState> {
   final FocusSessionRepository _sessionRepository;
   final TaskRepository _taskRepository;
   final SettingsRepository? _settingsRepository;
+  final DateTime Function() _nowProvider;
 
   StreamSubscription? _sessionSubscription;
   StreamSubscription? _taskSubscription;
@@ -91,7 +100,7 @@ class TodayCubit extends Cubit<TodayState> {
 
   Future<void> _recalculate() async {
     try {
-      final now = DateTime.now();
+      final now = _nowProvider();
       final startOfToday = DateTime(now.year, now.month, now.day);
       final endOfToday = DateTime(
         now.year,
@@ -167,6 +176,16 @@ class TodayCubit extends Cubit<TodayState> {
       final priorityInsights = _calculatePriorityInsights(tasks);
       final topTasksInsights = _calculateTopTasksInsights(tasks);
 
+      // Compute weekly review summary (FOC-34)
+      final weeklyReview = _calculateWeeklyReview(
+        sessions: sessions,
+        tasks: tasks,
+        weeklyMetrics: weeklyMetrics,
+        dailyGoalMinutes: goalMinutes,
+        categoryInsights: categoryInsights,
+        now: now,
+      );
+
       emit(
         state.copyWith(
           status: TodayStatus.loaded,
@@ -185,6 +204,7 @@ class TodayCubit extends Cubit<TodayState> {
           categoryInsights: categoryInsights,
           priorityInsights: priorityInsights,
           topTasksInsights: topTasksInsights,
+          weeklyReview: weeklyReview,
         ),
       );
     } catch (e) {
@@ -426,6 +446,108 @@ class TodayCubit extends Cubit<TodayState> {
         estimatedMinutes: t.estimatedMinutes,
       );
     }).toList();
+  }
+
+  WeeklyReviewData _calculateWeeklyReview({
+    required List<FocusSession> sessions,
+    required List<Task> tasks,
+    required List<DailyFocusMetric> weeklyMetrics,
+    required int dailyGoalMinutes,
+    required List<CategoryFocusInsight> categoryInsights,
+    required DateTime now,
+  }) {
+    final startDate = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(const Duration(days: 6));
+    final endDate = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
+
+    final prevStartDate = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(const Duration(days: 13));
+    final prevEndDate = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      23,
+      59,
+      59,
+      999,
+    ).subtract(const Duration(days: 7));
+
+    final workSessions = sessions.where((s) => s.mode == FocusMode.work);
+
+    final thisWeekSessions = workSessions.where((s) {
+      return s.completedAt.isAfter(startDate) &&
+          s.completedAt.isBefore(endDate);
+    }).toList();
+
+    final prevWeekSessions = workSessions.where((s) {
+      return s.completedAt.isAfter(prevStartDate) &&
+          s.completedAt.isBefore(prevEndDate);
+    }).toList();
+
+    final focusMinutesThisWeek = thisWeekSessions.fold<int>(
+      0,
+      (sum, s) => sum + (s.durationSeconds / 60).round(),
+    );
+
+    final focusMinutesPreviousWeek = prevWeekSessions.fold<int>(
+      0,
+      (sum, s) => sum + (s.durationSeconds / 60).round(),
+    );
+
+    final daysGoalMetCount = weeklyMetrics
+        .where((m) => m.focusMinutes >= dailyGoalMinutes)
+        .length;
+
+    final completedTasksThisWeek = tasks.where((t) {
+      if (!t.isCompleted) return false;
+      if (t.completedAt != null) {
+        return t.completedAt!.isAfter(startDate) &&
+            t.completedAt!.isBefore(endDate);
+      }
+      return true;
+    }).length;
+
+    String? bestDayLabel;
+    int bestDayMinutes = 0;
+    for (final m in weeklyMetrics) {
+      if (m.focusMinutes > bestDayMinutes) {
+        bestDayMinutes = m.focusMinutes;
+        bestDayLabel = m.dayLabel;
+      }
+    }
+
+    String? topCategory;
+    int topCategoryMinutes = 0;
+    if (categoryInsights.isNotEmpty && categoryInsights.first.minutes > 0) {
+      topCategory = categoryInsights.first.category;
+      topCategoryMinutes = categoryInsights.first.minutes;
+    }
+
+    final topTasksWithMinutes = tasks.where((t) => t.actualMinutes > 0).toList()
+      ..sort((a, b) => b.actualMinutes.compareTo(a.actualMinutes));
+    final top3 = topTasksWithMinutes.take(3).toList();
+
+    return WeeklyReviewData(
+      startDate: startDate,
+      endDate: endDate,
+      focusMinutesThisWeek: focusMinutesThisWeek,
+      focusMinutesPreviousWeek: focusMinutesPreviousWeek,
+      completedSessionsCount: thisWeekSessions.length,
+      completedTasksCount: completedTasksThisWeek,
+      daysGoalMetCount: daysGoalMetCount,
+      dailyGoalMinutes: dailyGoalMinutes,
+      bestDayLabel: bestDayLabel,
+      bestDayMinutes: bestDayMinutes,
+      topCategory: topCategory,
+      topCategoryMinutes: topCategoryMinutes,
+      topTasks: top3,
+    );
   }
 
   Future<void> refresh() async {

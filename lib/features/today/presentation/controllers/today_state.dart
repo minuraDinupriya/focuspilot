@@ -3,6 +3,7 @@ import 'package:focuspilot/features/tasks/domain/models/task.dart';
 import 'package:focuspilot/features/today/domain/models/daily_focus_metric.dart';
 import 'package:focuspilot/features/today/domain/models/heatmap_day.dart';
 import 'package:focuspilot/features/today/domain/models/productivity_insight.dart';
+import 'package:focuspilot/features/today/domain/models/weekly_review_data.dart';
 
 enum TodayStatus { initial, loading, loaded, error }
 
@@ -24,6 +25,7 @@ class TodayState extends Equatable {
     this.categoryInsights = const [],
     this.priorityInsights = const [],
     this.topTasksInsights = const [],
+    this.weeklyReview,
     this.errorMessage,
   });
 
@@ -43,6 +45,7 @@ class TodayState extends Equatable {
   final List<CategoryFocusInsight> categoryInsights;
   final List<PriorityFocusInsight> priorityInsights;
   final List<TopTaskFocusInsight> topTasksInsights;
+  final WeeklyReviewData? weeklyReview;
   final String? errorMessage;
 
   double get goalProgress {
@@ -109,6 +112,7 @@ class TodayState extends Equatable {
     List<CategoryFocusInsight>? categoryInsights,
     List<PriorityFocusInsight>? priorityInsights,
     List<TopTaskFocusInsight>? topTasksInsights,
+    WeeklyReviewData? weeklyReview,
     String? errorMessage,
   }) {
     return TodayState(
@@ -129,6 +133,7 @@ class TodayState extends Equatable {
       categoryInsights: categoryInsights ?? this.categoryInsights,
       priorityInsights: priorityInsights ?? this.priorityInsights,
       topTasksInsights: topTasksInsights ?? this.topTasksInsights,
+      weeklyReview: weeklyReview ?? this.weeklyReview,
       errorMessage: errorMessage,
     );
   }
@@ -151,6 +156,7 @@ class TodayState extends Equatable {
     categoryInsights,
     priorityInsights,
     topTasksInsights,
+    weeklyReview,
     errorMessage,
   ];
 }

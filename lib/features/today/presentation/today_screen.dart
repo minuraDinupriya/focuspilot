@@ -11,6 +11,7 @@ import 'package:focuspilot/features/today/presentation/widgets/priority_tasks_pr
 import 'package:focuspilot/features/today/presentation/widgets/productivity_insights_card.dart';
 import 'package:focuspilot/features/today/presentation/widgets/quick_start_focus_card.dart';
 import 'package:focuspilot/features/today/presentation/widgets/weekly_analytics_chart.dart';
+import 'package:focuspilot/features/today/presentation/widgets/weekly_review_sheet.dart';
 
 class TodayScreen extends StatelessWidget {
   const TodayScreen({super.key, this.onNavigateToFocus, this.onFocusTask});
@@ -65,18 +66,37 @@ class TodayScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header Greeting
-                Text(
-                  'Good day!',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  'Stay focused and crush your goals.',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+                // Header Greeting & Weekly Review Action
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Good day!',
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Stay focused and crush your goals.',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    FilledButton.tonalIcon(
+                      key: const Key('weekly_review_button'),
+                      onPressed: () =>
+                          WeeklyReviewSheet.show(context, state.weeklyReview),
+                      icon: const Icon(Icons.insights_rounded, size: 18),
+                      label: const Text('Review'),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 24),
 
@@ -139,12 +159,14 @@ class TodayScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // 7-Day Weekly Analytics Chart (FOC-13)
+                // 7-Day Weekly Analytics Chart (FOC-13 & FOC-34)
                 if (state.weeklyMetrics.isNotEmpty) ...[
                   WeeklyAnalyticsChart(
                     metrics: state.weeklyMetrics,
                     maxMinutes: state.maxWeeklyMinutes,
                     streakDays: state.currentStreakDays,
+                    onViewReview: () =>
+                        WeeklyReviewSheet.show(context, state.weeklyReview),
                   ),
                   const SizedBox(height: 24),
                 ],

@@ -7,11 +7,13 @@ class WeeklyAnalyticsChart extends StatelessWidget {
     required this.metrics,
     required this.maxMinutes,
     required this.streakDays,
+    this.onViewReview,
   });
 
   final List<DailyFocusMetric> metrics;
   final int maxMinutes;
   final int streakDays;
+  final VoidCallback? onViewReview;
 
   @override
   Widget build(BuildContext context) {
@@ -167,6 +169,45 @@ class WeeklyAnalyticsChart extends StatelessWidget {
               }).toList(),
             ),
           ),
+          if (onViewReview != null) ...[
+            const SizedBox(height: 14),
+            Divider(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 6),
+            InkWell(
+              key: const Key('weekly_analytics_view_review_button'),
+              onTap: onViewReview,
+              borderRadius: BorderRadius.circular(10),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.insights_rounded,
+                      size: 16,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'View Weekly Review Summary',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 16,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

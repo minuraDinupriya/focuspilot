@@ -15,6 +15,7 @@ import 'package:focuspilot/features/today/presentation/widgets/priority_tasks_pr
 import 'package:focuspilot/features/today/presentation/widgets/productivity_insights_card.dart';
 import 'package:focuspilot/features/today/presentation/widgets/quick_start_focus_card.dart';
 import 'package:focuspilot/features/today/presentation/widgets/weekly_analytics_chart.dart';
+import 'package:focuspilot/features/today/presentation/widgets/weekly_review_sheet.dart';
 
 import '../../tasks/fakes/fake_task_repository.dart';
 import '../fakes/fake_focus_session_repository.dart';
@@ -182,6 +183,36 @@ void main() {
       await tester.pump();
 
       expect(navigated, isTrue);
+
+      cubit.close();
+    });
+
+    testWidgets('tapping Review button opens WeeklyReviewSheet', (
+      tester,
+    ) async {
+      final cubit = TodayCubit(
+        sessionRepository: fakeSessionRepository,
+        taskRepository: fakeTaskRepository,
+      );
+
+      await cubit.refresh();
+
+      await tester.pumpWidget(createSubject(cubit: cubit));
+      await tester.pump();
+
+      final reviewButtonFinder = find.byKey(const Key('weekly_review_button'));
+      expect(reviewButtonFinder, findsOneWidget);
+
+      await tester.tap(reviewButtonFinder);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(WeeklyReviewSheet), findsOneWidget);
+
+      // Dismiss using the top close button
+      await tester.tap(find.byKey(const Key('weekly_review_close_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(WeeklyReviewSheet), findsNothing);
 
       cubit.close();
     });
