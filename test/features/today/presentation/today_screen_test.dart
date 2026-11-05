@@ -9,6 +9,7 @@ import 'package:focuspilot/features/today/presentation/controllers/today_cubit.d
 import 'package:focuspilot/features/today/presentation/today_screen.dart';
 import 'package:focuspilot/features/today/presentation/widgets/daily_goal_ring.dart';
 import 'package:focuspilot/features/today/presentation/widgets/focus_heatmap_card.dart';
+import 'package:focuspilot/features/today/presentation/widgets/goal_streaks_card.dart';
 import 'package:focuspilot/features/today/presentation/widgets/metric_cards_row.dart';
 import 'package:focuspilot/features/today/presentation/widgets/priority_tasks_preview.dart';
 import 'package:focuspilot/features/today/presentation/widgets/quick_start_focus_card.dart';
@@ -65,6 +66,7 @@ void main() {
 
         expect(find.byType(DailyGoalRing), findsOneWidget);
         expect(find.byType(MetricCardsRow), findsOneWidget);
+        expect(find.byType(GoalStreaksCard), findsOneWidget);
         expect(find.byType(WeeklyAnalyticsChart), findsOneWidget);
         expect(find.byType(FocusHeatmapCard), findsOneWidget);
         expect(find.byType(QuickStartFocusCard), findsOneWidget);
@@ -103,12 +105,16 @@ void main() {
       expect(find.byType(PriorityTasksPreview), findsOneWidget);
       expect(find.text('Finish Sprint 4'), findsOneWidget);
 
-      await tester.tap(
-        find.descendant(
-          of: find.byType(PriorityTasksPreview),
-          matching: find.text('Focus'),
-        ),
+      final focusButtonFinder = find.descendant(
+        of: find.byType(PriorityTasksPreview),
+        matching: find.text('Focus'),
       );
+      await tester.scrollUntilVisible(
+        focusButtonFinder,
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(focusButtonFinder);
       await tester.pump();
 
       expect(selectedTask?.title, 'Finish Sprint 4');

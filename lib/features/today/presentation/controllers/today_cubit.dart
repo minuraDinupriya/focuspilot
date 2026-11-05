@@ -74,7 +74,12 @@ class TodayCubit extends Cubit<TodayState> {
         settings,
       ) {
         if (!isClosed) {
-          emit(state.copyWith(dailyGoalMinutes: settings.dailyGoalMinutes));
+          emit(
+            state.copyWith(
+              dailyGoalMinutes: settings.dailyGoalMinutes,
+              weeklyGoalMinutes: settings.weeklyGoalMinutes,
+            ),
+          );
         }
       });
     }
@@ -134,25 +139,41 @@ class TodayCubit extends Cubit<TodayState> {
       // Compute last 91 days (13 weeks) heatmap days
       final heatmapDays = _calculateHeatmapDays(sessions, now);
 
-      // Compute streak
+      // Compute streak and best historical streak
       final streak = _calculateStreak(sessions, now);
+      final bestStreak = _calculateBestStreak(sessions);
 
       int goalMinutes = state.dailyGoalMinutes;
+      int weeklyGoalMinutes = state.weeklyGoalMinutes;
       if (_settingsRepository != null) {
         final s = await _settingsRepository.getSettings();
         goalMinutes = s.dailyGoalMinutes;
+        weeklyGoalMinutes = s.weeklyGoalMinutes;
       }
+
+      // Compute weekly focus minutes and days goal met
+      final focusMinutesThisWeek = weeklyMetrics.fold<int>(
+        0,
+        (sum, m) => sum + m.focusMinutes,
+      );
+      final daysGoalMetThisWeek = weeklyMetrics
+          .where((m) => m.focusMinutes >= goalMinutes)
+          .length;
 
       emit(
         state.copyWith(
           status: TodayStatus.loaded,
           focusMinutesToday: focusMinutes,
           dailyGoalMinutes: goalMinutes,
+          focusMinutesThisWeek: focusMinutesThisWeek,
+          weeklyGoalMinutes: weeklyGoalMinutes,
           completedSessionsToday: completedWorkSessions.length,
           completedTasksToday: completedTasksCount,
           weeklyMetrics: weeklyMetrics,
           heatmapDays: heatmapDays,
           currentStreakDays: streak,
+          bestStreakDays: bestStreak,
+          daysGoalMetThisWeek: daysGoalMetThisWeek,
           priorityTasks: priorityTasks,
         ),
       );
@@ -306,6 +327,36 @@ class TodayCubit extends Cubit<TodayState> {
     }
 
     return streak;
+  }
+
+  int _calculateBestStreak(List<FocusSession> sessions) {
+    final workSessions = sessions.where((s) => s.mode == FocusMode.work);
+    if (workSessions.isEmpty) return 0;
+
+    final dates =
+        workSessions
+            .map((s) {
+              return DateTime(
+                s.completedAt.year,
+                s.completedAt.month,
+                s.completedAt.day,
+              );
+            })
+            .toSet()
+            .toList()
+          ..sort();
+
+    int maxStreak = 1;
+    int current = 1;
+    for (int i = 1; i < dates.length; i++) {
+      if (dates[i].difference(dates[i - 1]).inDays == 1) {
+        current++;
+        if (current > maxStreak) maxStreak = current;
+      } else {
+        current = 1;
+      }
+    }
+    return maxStreak;
   }
 
   Future<void> refresh() async {

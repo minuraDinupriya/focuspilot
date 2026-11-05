@@ -1694,6 +1694,18 @@ class $UserSettingsEntriesTable extends UserSettingsEntries
     requiredDuringInsert: false,
     defaultValue: const Constant(120),
   );
+  static const VerificationMeta _weeklyGoalMinutesMeta = const VerificationMeta(
+    'weeklyGoalMinutes',
+  );
+  @override
+  late final GeneratedColumn<int> weeklyGoalMinutes = GeneratedColumn<int>(
+    'weekly_goal_minutes',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(600),
+  );
   static const VerificationMeta _activePresetIdMeta = const VerificationMeta(
     'activePresetId',
   );
@@ -1757,6 +1769,7 @@ class $UserSettingsEntriesTable extends UserSettingsEntries
     shortBreakDurationMinutes,
     longBreakDurationMinutes,
     dailyGoalMinutes,
+    weeklyGoalMinutes,
     activePresetId,
     autoStartNextSession,
     soundEnabled,
@@ -1812,6 +1825,15 @@ class $UserSettingsEntriesTable extends UserSettingsEntries
         dailyGoalMinutes.isAcceptableOrUnknown(
           data['daily_goal_minutes']!,
           _dailyGoalMinutesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('weekly_goal_minutes')) {
+      context.handle(
+        _weeklyGoalMinutesMeta,
+        weeklyGoalMinutes.isAcceptableOrUnknown(
+          data['weekly_goal_minutes']!,
+          _weeklyGoalMinutesMeta,
         ),
       );
     }
@@ -1880,6 +1902,10 @@ class $UserSettingsEntriesTable extends UserSettingsEntries
         DriftSqlType.int,
         data['${effectivePrefix}daily_goal_minutes'],
       )!,
+      weeklyGoalMinutes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}weekly_goal_minutes'],
+      )!,
       activePresetId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}active_preset_id'],
@@ -1912,6 +1938,7 @@ class UserSettingsEntry extends DataClass
   final int shortBreakDurationMinutes;
   final int longBreakDurationMinutes;
   final int dailyGoalMinutes;
+  final int weeklyGoalMinutes;
   final String? activePresetId;
   final bool autoStartNextSession;
   final bool soundEnabled;
@@ -1922,6 +1949,7 @@ class UserSettingsEntry extends DataClass
     required this.shortBreakDurationMinutes,
     required this.longBreakDurationMinutes,
     required this.dailyGoalMinutes,
+    required this.weeklyGoalMinutes,
     this.activePresetId,
     required this.autoStartNextSession,
     required this.soundEnabled,
@@ -1939,6 +1967,7 @@ class UserSettingsEntry extends DataClass
       longBreakDurationMinutes,
     );
     map['daily_goal_minutes'] = Variable<int>(dailyGoalMinutes);
+    map['weekly_goal_minutes'] = Variable<int>(weeklyGoalMinutes);
     if (!nullToAbsent || activePresetId != null) {
       map['active_preset_id'] = Variable<String>(activePresetId);
     }
@@ -1955,6 +1984,7 @@ class UserSettingsEntry extends DataClass
       shortBreakDurationMinutes: Value(shortBreakDurationMinutes),
       longBreakDurationMinutes: Value(longBreakDurationMinutes),
       dailyGoalMinutes: Value(dailyGoalMinutes),
+      weeklyGoalMinutes: Value(weeklyGoalMinutes),
       activePresetId: activePresetId == null && nullToAbsent
           ? const Value.absent()
           : Value(activePresetId),
@@ -1981,6 +2011,7 @@ class UserSettingsEntry extends DataClass
         json['longBreakDurationMinutes'],
       ),
       dailyGoalMinutes: serializer.fromJson<int>(json['dailyGoalMinutes']),
+      weeklyGoalMinutes: serializer.fromJson<int>(json['weeklyGoalMinutes']),
       activePresetId: serializer.fromJson<String?>(json['activePresetId']),
       autoStartNextSession: serializer.fromJson<bool>(
         json['autoStartNextSession'],
@@ -2002,6 +2033,7 @@ class UserSettingsEntry extends DataClass
         longBreakDurationMinutes,
       ),
       'dailyGoalMinutes': serializer.toJson<int>(dailyGoalMinutes),
+      'weeklyGoalMinutes': serializer.toJson<int>(weeklyGoalMinutes),
       'activePresetId': serializer.toJson<String?>(activePresetId),
       'autoStartNextSession': serializer.toJson<bool>(autoStartNextSession),
       'soundEnabled': serializer.toJson<bool>(soundEnabled),
@@ -2015,6 +2047,7 @@ class UserSettingsEntry extends DataClass
     int? shortBreakDurationMinutes,
     int? longBreakDurationMinutes,
     int? dailyGoalMinutes,
+    int? weeklyGoalMinutes,
     Value<String?> activePresetId = const Value.absent(),
     bool? autoStartNextSession,
     bool? soundEnabled,
@@ -2027,6 +2060,7 @@ class UserSettingsEntry extends DataClass
     longBreakDurationMinutes:
         longBreakDurationMinutes ?? this.longBreakDurationMinutes,
     dailyGoalMinutes: dailyGoalMinutes ?? this.dailyGoalMinutes,
+    weeklyGoalMinutes: weeklyGoalMinutes ?? this.weeklyGoalMinutes,
     activePresetId: activePresetId.present
         ? activePresetId.value
         : this.activePresetId,
@@ -2049,6 +2083,9 @@ class UserSettingsEntry extends DataClass
       dailyGoalMinutes: data.dailyGoalMinutes.present
           ? data.dailyGoalMinutes.value
           : this.dailyGoalMinutes,
+      weeklyGoalMinutes: data.weeklyGoalMinutes.present
+          ? data.weeklyGoalMinutes.value
+          : this.weeklyGoalMinutes,
       activePresetId: data.activePresetId.present
           ? data.activePresetId.value
           : this.activePresetId,
@@ -2072,6 +2109,7 @@ class UserSettingsEntry extends DataClass
           ..write('shortBreakDurationMinutes: $shortBreakDurationMinutes, ')
           ..write('longBreakDurationMinutes: $longBreakDurationMinutes, ')
           ..write('dailyGoalMinutes: $dailyGoalMinutes, ')
+          ..write('weeklyGoalMinutes: $weeklyGoalMinutes, ')
           ..write('activePresetId: $activePresetId, ')
           ..write('autoStartNextSession: $autoStartNextSession, ')
           ..write('soundEnabled: $soundEnabled, ')
@@ -2087,6 +2125,7 @@ class UserSettingsEntry extends DataClass
     shortBreakDurationMinutes,
     longBreakDurationMinutes,
     dailyGoalMinutes,
+    weeklyGoalMinutes,
     activePresetId,
     autoStartNextSession,
     soundEnabled,
@@ -2101,6 +2140,7 @@ class UserSettingsEntry extends DataClass
           other.shortBreakDurationMinutes == this.shortBreakDurationMinutes &&
           other.longBreakDurationMinutes == this.longBreakDurationMinutes &&
           other.dailyGoalMinutes == this.dailyGoalMinutes &&
+          other.weeklyGoalMinutes == this.weeklyGoalMinutes &&
           other.activePresetId == this.activePresetId &&
           other.autoStartNextSession == this.autoStartNextSession &&
           other.soundEnabled == this.soundEnabled &&
@@ -2113,6 +2153,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
   final Value<int> shortBreakDurationMinutes;
   final Value<int> longBreakDurationMinutes;
   final Value<int> dailyGoalMinutes;
+  final Value<int> weeklyGoalMinutes;
   final Value<String?> activePresetId;
   final Value<bool> autoStartNextSession;
   final Value<bool> soundEnabled;
@@ -2124,6 +2165,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
     this.shortBreakDurationMinutes = const Value.absent(),
     this.longBreakDurationMinutes = const Value.absent(),
     this.dailyGoalMinutes = const Value.absent(),
+    this.weeklyGoalMinutes = const Value.absent(),
     this.activePresetId = const Value.absent(),
     this.autoStartNextSession = const Value.absent(),
     this.soundEnabled = const Value.absent(),
@@ -2136,6 +2178,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
     this.shortBreakDurationMinutes = const Value.absent(),
     this.longBreakDurationMinutes = const Value.absent(),
     this.dailyGoalMinutes = const Value.absent(),
+    this.weeklyGoalMinutes = const Value.absent(),
     this.activePresetId = const Value.absent(),
     this.autoStartNextSession = const Value.absent(),
     this.soundEnabled = const Value.absent(),
@@ -2148,6 +2191,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
     Expression<int>? shortBreakDurationMinutes,
     Expression<int>? longBreakDurationMinutes,
     Expression<int>? dailyGoalMinutes,
+    Expression<int>? weeklyGoalMinutes,
     Expression<String>? activePresetId,
     Expression<bool>? autoStartNextSession,
     Expression<bool>? soundEnabled,
@@ -2163,6 +2207,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
       if (longBreakDurationMinutes != null)
         'long_break_duration_minutes': longBreakDurationMinutes,
       if (dailyGoalMinutes != null) 'daily_goal_minutes': dailyGoalMinutes,
+      if (weeklyGoalMinutes != null) 'weekly_goal_minutes': weeklyGoalMinutes,
       if (activePresetId != null) 'active_preset_id': activePresetId,
       if (autoStartNextSession != null)
         'auto_start_next_session': autoStartNextSession,
@@ -2178,6 +2223,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
     Value<int>? shortBreakDurationMinutes,
     Value<int>? longBreakDurationMinutes,
     Value<int>? dailyGoalMinutes,
+    Value<int>? weeklyGoalMinutes,
     Value<String?>? activePresetId,
     Value<bool>? autoStartNextSession,
     Value<bool>? soundEnabled,
@@ -2192,6 +2238,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
       longBreakDurationMinutes:
           longBreakDurationMinutes ?? this.longBreakDurationMinutes,
       dailyGoalMinutes: dailyGoalMinutes ?? this.dailyGoalMinutes,
+      weeklyGoalMinutes: weeklyGoalMinutes ?? this.weeklyGoalMinutes,
       activePresetId: activePresetId ?? this.activePresetId,
       autoStartNextSession: autoStartNextSession ?? this.autoStartNextSession,
       soundEnabled: soundEnabled ?? this.soundEnabled,
@@ -2222,6 +2269,9 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
     if (dailyGoalMinutes.present) {
       map['daily_goal_minutes'] = Variable<int>(dailyGoalMinutes.value);
     }
+    if (weeklyGoalMinutes.present) {
+      map['weekly_goal_minutes'] = Variable<int>(weeklyGoalMinutes.value);
+    }
     if (activePresetId.present) {
       map['active_preset_id'] = Variable<String>(activePresetId.value);
     }
@@ -2250,6 +2300,7 @@ class UserSettingsEntriesCompanion extends UpdateCompanion<UserSettingsEntry> {
           ..write('shortBreakDurationMinutes: $shortBreakDurationMinutes, ')
           ..write('longBreakDurationMinutes: $longBreakDurationMinutes, ')
           ..write('dailyGoalMinutes: $dailyGoalMinutes, ')
+          ..write('weeklyGoalMinutes: $weeklyGoalMinutes, ')
           ..write('activePresetId: $activePresetId, ')
           ..write('autoStartNextSession: $autoStartNextSession, ')
           ..write('soundEnabled: $soundEnabled, ')
@@ -3871,6 +3922,7 @@ typedef $$UserSettingsEntriesTableCreateCompanionBuilder =
       Value<int> shortBreakDurationMinutes,
       Value<int> longBreakDurationMinutes,
       Value<int> dailyGoalMinutes,
+      Value<int> weeklyGoalMinutes,
       Value<String?> activePresetId,
       Value<bool> autoStartNextSession,
       Value<bool> soundEnabled,
@@ -3884,6 +3936,7 @@ typedef $$UserSettingsEntriesTableUpdateCompanionBuilder =
       Value<int> shortBreakDurationMinutes,
       Value<int> longBreakDurationMinutes,
       Value<int> dailyGoalMinutes,
+      Value<int> weeklyGoalMinutes,
       Value<String?> activePresetId,
       Value<bool> autoStartNextSession,
       Value<bool> soundEnabled,
@@ -3922,6 +3975,11 @@ class $$UserSettingsEntriesTableFilterComposer
 
   ColumnFilters<int> get dailyGoalMinutes => $composableBuilder(
     column: $table.dailyGoalMinutes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get weeklyGoalMinutes => $composableBuilder(
+    column: $table.weeklyGoalMinutes,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3980,6 +4038,11 @@ class $$UserSettingsEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get weeklyGoalMinutes => $composableBuilder(
+    column: $table.weeklyGoalMinutes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get activePresetId => $composableBuilder(
     column: $table.activePresetId,
     builder: (column) => ColumnOrderings(column),
@@ -4030,6 +4093,11 @@ class $$UserSettingsEntriesTableAnnotationComposer
 
   GeneratedColumn<int> get dailyGoalMinutes => $composableBuilder(
     column: $table.dailyGoalMinutes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get weeklyGoalMinutes => $composableBuilder(
+    column: $table.weeklyGoalMinutes,
     builder: (column) => column,
   );
 
@@ -4102,6 +4170,7 @@ class $$UserSettingsEntriesTableTableManager
                 Value<int> shortBreakDurationMinutes = const Value.absent(),
                 Value<int> longBreakDurationMinutes = const Value.absent(),
                 Value<int> dailyGoalMinutes = const Value.absent(),
+                Value<int> weeklyGoalMinutes = const Value.absent(),
                 Value<String?> activePresetId = const Value.absent(),
                 Value<bool> autoStartNextSession = const Value.absent(),
                 Value<bool> soundEnabled = const Value.absent(),
@@ -4113,6 +4182,7 @@ class $$UserSettingsEntriesTableTableManager
                 shortBreakDurationMinutes: shortBreakDurationMinutes,
                 longBreakDurationMinutes: longBreakDurationMinutes,
                 dailyGoalMinutes: dailyGoalMinutes,
+                weeklyGoalMinutes: weeklyGoalMinutes,
                 activePresetId: activePresetId,
                 autoStartNextSession: autoStartNextSession,
                 soundEnabled: soundEnabled,
@@ -4126,6 +4196,7 @@ class $$UserSettingsEntriesTableTableManager
                 Value<int> shortBreakDurationMinutes = const Value.absent(),
                 Value<int> longBreakDurationMinutes = const Value.absent(),
                 Value<int> dailyGoalMinutes = const Value.absent(),
+                Value<int> weeklyGoalMinutes = const Value.absent(),
                 Value<String?> activePresetId = const Value.absent(),
                 Value<bool> autoStartNextSession = const Value.absent(),
                 Value<bool> soundEnabled = const Value.absent(),
@@ -4137,6 +4208,7 @@ class $$UserSettingsEntriesTableTableManager
                 shortBreakDurationMinutes: shortBreakDurationMinutes,
                 longBreakDurationMinutes: longBreakDurationMinutes,
                 dailyGoalMinutes: dailyGoalMinutes,
+                weeklyGoalMinutes: weeklyGoalMinutes,
                 activePresetId: activePresetId,
                 autoStartNextSession: autoStartNextSession,
                 soundEnabled: soundEnabled,

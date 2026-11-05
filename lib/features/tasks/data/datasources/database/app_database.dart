@@ -61,6 +61,8 @@ class UserSettingsEntries extends Table {
       integer().withDefault(const Constant(15))();
   IntColumn get dailyGoalMinutes =>
       integer().withDefault(const Constant(120))();
+  IntColumn get weeklyGoalMinutes =>
+      integer().withDefault(const Constant(600))();
   TextColumn get activePresetId =>
       text().nullable().withDefault(const Constant('preset-classic'))();
   BoolColumn get autoStartNextSession =>
@@ -98,7 +100,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -148,6 +150,12 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 7) {
         await m.addColumn(taskEntries, taskEntries.actualMinutes);
+      }
+      if (from < 8) {
+        await m.addColumn(
+          userSettingsEntries,
+          userSettingsEntries.weeklyGoalMinutes,
+        );
       }
     },
   );

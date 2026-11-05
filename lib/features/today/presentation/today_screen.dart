@@ -5,6 +5,7 @@ import 'package:focuspilot/features/today/presentation/controllers/today_cubit.d
 import 'package:focuspilot/features/today/presentation/controllers/today_state.dart';
 import 'package:focuspilot/features/today/presentation/widgets/daily_goal_ring.dart';
 import 'package:focuspilot/features/today/presentation/widgets/focus_heatmap_card.dart';
+import 'package:focuspilot/features/today/presentation/widgets/goal_streaks_card.dart';
 import 'package:focuspilot/features/today/presentation/widgets/metric_cards_row.dart';
 import 'package:focuspilot/features/today/presentation/widgets/priority_tasks_preview.dart';
 import 'package:focuspilot/features/today/presentation/widgets/quick_start_focus_card.dart';
@@ -91,6 +92,24 @@ class TodayScreen extends StatelessWidget {
                   focusMinutes: state.focusMinutesToday,
                   completedSessions: state.completedSessionsToday,
                   completedTasks: state.completedTasksToday,
+                ),
+                const SizedBox(height: 24),
+
+                // Goals & Streaks Tracker (FOC-32)
+                GoalStreaksCard(
+                  currentStreakDays: state.currentStreakDays,
+                  bestStreakDays: state.bestStreakDays,
+                  nextMilestoneDays: state.nextStreakMilestone,
+                  streakBadge: state.streakMilestoneBadge,
+                  focusMinutesToday: state.focusMinutesToday,
+                  dailyGoalMinutes: state.dailyGoalMinutes,
+                  dailyGoalProgress: state.goalProgress,
+                  isDailyGoalAchieved: state.isDailyGoalAchieved,
+                  focusMinutesThisWeek: state.focusMinutesThisWeek,
+                  weeklyGoalMinutes: state.weeklyGoalMinutes,
+                  weeklyGoalProgress: state.weeklyGoalProgress,
+                  isWeeklyGoalAchieved: state.isWeeklyGoalAchieved,
+                  daysGoalMetThisWeek: state.daysGoalMetThisWeek,
                 ),
                 const SizedBox(height: 24),
 
