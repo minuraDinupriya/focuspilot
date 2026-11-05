@@ -8,6 +8,7 @@ import 'package:focuspilot/features/tasks/domain/models/task_priority.dart';
 import 'package:focuspilot/features/today/presentation/controllers/today_cubit.dart';
 import 'package:focuspilot/features/today/presentation/today_screen.dart';
 import 'package:focuspilot/features/today/presentation/widgets/daily_goal_ring.dart';
+import 'package:focuspilot/features/today/presentation/widgets/focus_heatmap_card.dart';
 import 'package:focuspilot/features/today/presentation/widgets/metric_cards_row.dart';
 import 'package:focuspilot/features/today/presentation/widgets/priority_tasks_preview.dart';
 import 'package:focuspilot/features/today/presentation/widgets/quick_start_focus_card.dart';
@@ -65,6 +66,7 @@ void main() {
         expect(find.byType(DailyGoalRing), findsOneWidget);
         expect(find.byType(MetricCardsRow), findsOneWidget);
         expect(find.byType(WeeklyAnalyticsChart), findsOneWidget);
+        expect(find.byType(FocusHeatmapCard), findsOneWidget);
         expect(find.byType(QuickStartFocusCard), findsOneWidget);
         expect(find.text('Good day!'), findsOneWidget);
 
@@ -164,7 +166,7 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('Start'),
         200,
-        scrollable: find.byType(Scrollable),
+        scrollable: find.byType(Scrollable).first,
       );
       await tester.pump();
 

@@ -169,5 +169,33 @@ void main() {
       expect(cubit.state.weeklyMetrics.last.focusMinutes, 25); // today is last
       expect(cubit.state.weeklyMetrics.last.isToday, isTrue);
     });
+
+    test('calculates 91 heatmapDays across 13 full weeks', () async {
+      final now = DateTime.now();
+      final sessionToday = FocusSession(
+        id: 'h_today',
+        mode: FocusMode.work,
+        completedAt: now,
+        durationSeconds: 3600, // 60 mins -> level 3
+      );
+      final session30DaysAgo = FocusSession(
+        id: 'h_30',
+        mode: FocusMode.work,
+        completedAt: now.subtract(const Duration(days: 30)),
+        durationSeconds: 1500, // 25 mins -> level 2
+      );
+
+      fakeSessionRepository.emitSessions([sessionToday, session30DaysAgo]);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(cubit.state.heatmapDays.length, 91);
+      expect(cubit.state.totalHeatmapMinutes, 85);
+      expect(cubit.state.totalHeatmapHours, closeTo(85 / 60.0, 0.01));
+
+      final activeDays = cubit.state.heatmapDays.where(
+        (d) => d.focusMinutes > 0,
+      );
+      expect(activeDays.length, 2);
+    });
   });
 }

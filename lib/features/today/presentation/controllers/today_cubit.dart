@@ -8,6 +8,7 @@ import 'package:focuspilot/features/settings/domain/repositories/settings_reposi
 import 'package:focuspilot/features/tasks/domain/models/task_priority.dart';
 import 'package:focuspilot/features/tasks/domain/repositories/task_repository.dart';
 import 'package:focuspilot/features/today/domain/models/daily_focus_metric.dart';
+import 'package:focuspilot/features/today/domain/models/heatmap_day.dart';
 import 'package:focuspilot/features/today/presentation/controllers/today_state.dart';
 
 class TodayCubit extends Cubit<TodayState> {
@@ -130,6 +131,9 @@ class TodayCubit extends Cubit<TodayState> {
       // Compute last 7 days metrics
       final weeklyMetrics = _calculateWeeklyMetrics(sessions, now);
 
+      // Compute last 91 days (13 weeks) heatmap days
+      final heatmapDays = _calculateHeatmapDays(sessions, now);
+
       // Compute streak
       final streak = _calculateStreak(sessions, now);
 
@@ -147,6 +151,7 @@ class TodayCubit extends Cubit<TodayState> {
           completedSessionsToday: completedWorkSessions.length,
           completedTasksToday: completedTasksCount,
           weeklyMetrics: weeklyMetrics,
+          heatmapDays: heatmapDays,
           currentStreakDays: streak,
           priorityTasks: priorityTasks,
         ),
@@ -233,6 +238,39 @@ class TodayCubit extends Cubit<TodayState> {
     }
 
     return metrics;
+  }
+
+  List<HeatmapDay> _calculateHeatmapDays(
+    List<FocusSession> sessions,
+    DateTime now,
+  ) {
+    final workSessions = sessions.where((s) => s.mode == FocusMode.work);
+    final minutesByDate = <DateTime, int>{};
+
+    for (final s in workSessions) {
+      final d = DateTime(
+        s.completedAt.year,
+        s.completedAt.month,
+        s.completedAt.day,
+      );
+      minutesByDate[d] =
+          (minutesByDate[d] ?? 0) + (s.durationSeconds / 60).round();
+    }
+
+    final today = DateTime(now.year, now.month, now.day);
+    // Align to Monday of 12 weeks ago (total 13 weeks = 91 days)
+    final daysSinceMonday = today.weekday - 1;
+    final currentWeekMonday = today.subtract(Duration(days: daysSinceMonday));
+    final startDate = currentWeekMonday.subtract(const Duration(days: 12 * 7));
+
+    final heatmap = <HeatmapDay>[];
+    for (int i = 0; i < 91; i++) {
+      final date = startDate.add(Duration(days: i));
+      final minutes = minutesByDate[date] ?? 0;
+      heatmap.add(HeatmapDay.fromMinutes(date: date, focusMinutes: minutes));
+    }
+
+    return heatmap;
   }
 
   int _calculateStreak(List<FocusSession> sessions, DateTime now) {

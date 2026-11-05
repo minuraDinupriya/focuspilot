@@ -4,6 +4,7 @@ import 'package:focuspilot/features/tasks/domain/models/task.dart';
 import 'package:focuspilot/features/today/presentation/controllers/today_cubit.dart';
 import 'package:focuspilot/features/today/presentation/controllers/today_state.dart';
 import 'package:focuspilot/features/today/presentation/widgets/daily_goal_ring.dart';
+import 'package:focuspilot/features/today/presentation/widgets/focus_heatmap_card.dart';
 import 'package:focuspilot/features/today/presentation/widgets/metric_cards_row.dart';
 import 'package:focuspilot/features/today/presentation/widgets/priority_tasks_preview.dart';
 import 'package:focuspilot/features/today/presentation/widgets/quick_start_focus_card.dart';
@@ -116,6 +117,15 @@ class TodayScreen extends StatelessWidget {
                     metrics: state.weeklyMetrics,
                     maxMinutes: state.maxWeeklyMinutes,
                     streakDays: state.currentStreakDays,
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
+                // 90-Day Focus Activity Heatmap (FOC-31)
+                if (state.heatmapDays.isNotEmpty) ...[
+                  FocusHeatmapCard(
+                    heatmapDays: state.heatmapDays,
+                    totalMinutes: state.totalHeatmapMinutes,
                   ),
                   const SizedBox(height: 24),
                 ],
