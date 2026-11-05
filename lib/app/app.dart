@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:focuspilot/app/app_shell.dart';
+import 'package:focuspilot/app/theme/app_theme.dart';
 import 'package:focuspilot/features/focus/data/repositories/focus_session_repository_impl.dart';
 import 'package:focuspilot/features/focus/domain/models/ticker.dart';
 import 'package:focuspilot/features/focus/domain/repositories/focus_session_repository.dart';
@@ -103,14 +104,19 @@ class _FocusPilotAppState extends State<FocusPilotApp> {
             ),
           ),
         ],
-        child: MaterialApp(
-          title: 'FocusPilot',
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            useMaterial3: true,
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-          ),
-          home: const AppShell(),
+        child: BlocBuilder<SettingsCubit, SettingsState>(
+          buildWhen: (prev, curr) =>
+              prev.settings.themeMode != curr.settings.themeMode,
+          builder: (context, state) {
+            return MaterialApp(
+              title: 'FocusPilot',
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: state.settings.themeMode.toFlutterThemeMode(),
+              home: const AppShell(),
+            );
+          },
         ),
       ),
     );

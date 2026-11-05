@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focuspilot/features/settings/data/repositories/in_memory_settings_repository.dart';
+import 'package:focuspilot/features/settings/domain/models/app_theme_mode.dart';
 import 'package:focuspilot/features/settings/domain/models/user_settings.dart';
 import 'package:focuspilot/features/settings/presentation/controllers/settings_cubit.dart';
 
@@ -42,6 +43,19 @@ void main() {
       expect(cubit.state.settings.workDurationMinutes, 50);
       expect(cubit.state.settings.shortBreakDurationMinutes, 10);
       expect(cubit.state.settings.dailyGoalMinutes, 180);
+    });
+
+    test('updateThemeMode updates themeMode in state and repository', () async {
+      await Future<void>.delayed(Duration.zero);
+      expect(cubit.state.settings.themeMode, AppThemeMode.system);
+
+      await cubit.updateThemeMode(AppThemeMode.dark);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(cubit.state.settings.themeMode, AppThemeMode.dark);
+
+      final repoSettings = await repository.getSettings();
+      expect(repoSettings.themeMode, AppThemeMode.dark);
     });
   });
 }

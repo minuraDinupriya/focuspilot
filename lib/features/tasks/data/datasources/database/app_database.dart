@@ -69,6 +69,7 @@ class UserSettingsEntries extends Table {
       boolean().withDefault(const Constant(false))();
   BoolColumn get soundEnabled => boolean().withDefault(const Constant(true))();
   BoolColumn get hapticEnabled => boolean().withDefault(const Constant(true))();
+  TextColumn get themeMode => text().withDefault(const Constant('system'))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -100,7 +101,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -156,6 +157,9 @@ class AppDatabase extends _$AppDatabase {
           userSettingsEntries,
           userSettingsEntries.weeklyGoalMinutes,
         );
+      }
+      if (from < 9) {
+        await m.addColumn(userSettingsEntries, userSettingsEntries.themeMode);
       }
     },
   );

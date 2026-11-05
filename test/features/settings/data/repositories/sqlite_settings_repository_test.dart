@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focuspilot/features/settings/data/repositories/sqlite_settings_repository.dart';
+import 'package:focuspilot/features/settings/domain/models/app_theme_mode.dart';
 import 'package:focuspilot/features/settings/domain/models/timer_preset.dart';
 import 'package:focuspilot/features/settings/domain/models/user_settings.dart';
 import 'package:focuspilot/features/tasks/data/datasources/database/app_database.dart';
@@ -31,12 +32,13 @@ void main() {
     });
 
     test('saveSettings persists and retrieves updated settings', () async {
-      const customSettings = UserSettings(
+      final customSettings = UserSettings(
         workDurationMinutes: 50,
         shortBreakDurationMinutes: 10,
         longBreakDurationMinutes: 20,
         dailyGoalMinutes: 180,
         weeklyGoalMinutes: 900,
+        themeMode: AppThemeMode.dark,
       );
 
       await repository.saveSettings(customSettings);
@@ -48,6 +50,7 @@ void main() {
       expect(retrieved.longBreakDurationMinutes, 20);
       expect(retrieved.dailyGoalMinutes, 180);
       expect(retrieved.weeklyGoalMinutes, 900);
+      expect(retrieved.themeMode, AppThemeMode.dark);
     });
 
     test(
