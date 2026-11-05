@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
 import 'package:focuspilot/features/today/domain/models/daily_focus_metric.dart';
 import 'package:focuspilot/features/today/domain/models/heatmap_day.dart';
+import 'package:focuspilot/features/today/domain/models/productivity_insight.dart';
 
 enum TodayStatus { initial, loading, loaded, error }
 
@@ -20,6 +21,9 @@ class TodayState extends Equatable {
     this.bestStreakDays = 0,
     this.daysGoalMetThisWeek = 0,
     this.priorityTasks = const [],
+    this.categoryInsights = const [],
+    this.priorityInsights = const [],
+    this.topTasksInsights = const [],
     this.errorMessage,
   });
 
@@ -36,6 +40,9 @@ class TodayState extends Equatable {
   final int bestStreakDays;
   final int daysGoalMetThisWeek;
   final List<Task> priorityTasks;
+  final List<CategoryFocusInsight> categoryInsights;
+  final List<PriorityFocusInsight> priorityInsights;
+  final List<TopTaskFocusInsight> topTasksInsights;
   final String? errorMessage;
 
   double get goalProgress {
@@ -99,6 +106,9 @@ class TodayState extends Equatable {
     int? bestStreakDays,
     int? daysGoalMetThisWeek,
     List<Task>? priorityTasks,
+    List<CategoryFocusInsight>? categoryInsights,
+    List<PriorityFocusInsight>? priorityInsights,
+    List<TopTaskFocusInsight>? topTasksInsights,
     String? errorMessage,
   }) {
     return TodayState(
@@ -116,6 +126,9 @@ class TodayState extends Equatable {
       bestStreakDays: bestStreakDays ?? this.bestStreakDays,
       daysGoalMetThisWeek: daysGoalMetThisWeek ?? this.daysGoalMetThisWeek,
       priorityTasks: priorityTasks ?? this.priorityTasks,
+      categoryInsights: categoryInsights ?? this.categoryInsights,
+      priorityInsights: priorityInsights ?? this.priorityInsights,
+      topTasksInsights: topTasksInsights ?? this.topTasksInsights,
       errorMessage: errorMessage,
     );
   }
@@ -135,6 +148,9 @@ class TodayState extends Equatable {
     bestStreakDays,
     daysGoalMetThisWeek,
     priorityTasks,
+    categoryInsights,
+    priorityInsights,
+    topTasksInsights,
     errorMessage,
   ];
 }

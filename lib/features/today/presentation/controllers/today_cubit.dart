@@ -5,10 +5,12 @@ import 'package:focuspilot/features/focus/domain/models/focus_mode.dart';
 import 'package:focuspilot/features/focus/domain/models/focus_session.dart';
 import 'package:focuspilot/features/focus/domain/repositories/focus_session_repository.dart';
 import 'package:focuspilot/features/settings/domain/repositories/settings_repository.dart';
+import 'package:focuspilot/features/tasks/domain/models/task.dart';
 import 'package:focuspilot/features/tasks/domain/models/task_priority.dart';
 import 'package:focuspilot/features/tasks/domain/repositories/task_repository.dart';
 import 'package:focuspilot/features/today/domain/models/daily_focus_metric.dart';
 import 'package:focuspilot/features/today/domain/models/heatmap_day.dart';
+import 'package:focuspilot/features/today/domain/models/productivity_insight.dart';
 import 'package:focuspilot/features/today/presentation/controllers/today_state.dart';
 
 class TodayCubit extends Cubit<TodayState> {
@@ -160,6 +162,11 @@ class TodayCubit extends Cubit<TodayState> {
           .where((m) => m.focusMinutes >= goalMinutes)
           .length;
 
+      // Compute task productivity insights (FOC-33)
+      final categoryInsights = _calculateCategoryInsights(tasks);
+      final priorityInsights = _calculatePriorityInsights(tasks);
+      final topTasksInsights = _calculateTopTasksInsights(tasks);
+
       emit(
         state.copyWith(
           status: TodayStatus.loaded,
@@ -175,6 +182,9 @@ class TodayCubit extends Cubit<TodayState> {
           bestStreakDays: bestStreak,
           daysGoalMetThisWeek: daysGoalMetThisWeek,
           priorityTasks: priorityTasks,
+          categoryInsights: categoryInsights,
+          priorityInsights: priorityInsights,
+          topTasksInsights: topTasksInsights,
         ),
       );
     } catch (e) {
@@ -357,6 +367,65 @@ class TodayCubit extends Cubit<TodayState> {
       }
     }
     return maxStreak;
+  }
+
+  List<CategoryFocusInsight> _calculateCategoryInsights(List<Task> tasks) {
+    final map = <String, int>{};
+    for (final task in tasks) {
+      if (task.actualMinutes > 0) {
+        final cat = task.category?.trim().isNotEmpty ?? false
+            ? task.category!.trim()
+            : 'General';
+        map[cat] = (map[cat] ?? 0) + task.actualMinutes;
+      }
+    }
+    final total = map.values.fold<int>(0, (sum, m) => sum + m);
+    final insights = map.entries.map((entry) {
+      final percentage = total > 0 ? (entry.value / total) : 0.0;
+      return CategoryFocusInsight(
+        category: entry.key,
+        minutes: entry.value,
+        percentage: percentage,
+      );
+    }).toList();
+    insights.sort((a, b) => b.minutes.compareTo(a.minutes));
+    return insights;
+  }
+
+  List<PriorityFocusInsight> _calculatePriorityInsights(List<Task> tasks) {
+    final map = <TaskPriority, int>{
+      TaskPriority.high: 0,
+      TaskPriority.medium: 0,
+      TaskPriority.low: 0,
+    };
+    for (final task in tasks) {
+      if (task.actualMinutes > 0) {
+        map[task.priority] = (map[task.priority] ?? 0) + task.actualMinutes;
+      }
+    }
+    final total = map.values.fold<int>(0, (sum, m) => sum + m);
+    return TaskPriority.values.map((priority) {
+      final mins = map[priority] ?? 0;
+      final percentage = total > 0 ? (mins / total) : 0.0;
+      return PriorityFocusInsight(
+        priority: priority,
+        minutes: mins,
+        percentage: percentage,
+      );
+    }).toList();
+  }
+
+  List<TopTaskFocusInsight> _calculateTopTasksInsights(List<Task> tasks) {
+    final focusedTasks = tasks.where((t) => t.actualMinutes > 0).toList();
+    focusedTasks.sort((a, b) => b.actualMinutes.compareTo(a.actualMinutes));
+    return focusedTasks.take(5).map((t) {
+      return TopTaskFocusInsight(
+        taskId: t.id,
+        title: t.title,
+        actualMinutes: t.actualMinutes,
+        estimatedMinutes: t.estimatedMinutes,
+      );
+    }).toList();
   }
 
   Future<void> refresh() async {

@@ -245,5 +245,66 @@ void main() {
       expect(cubit.state.daysGoalMetThisWeek, 4);
       expect(cubit.state.isWeeklyGoalAchieved, isFalse);
     });
+
+    test(
+      'calculates category, priority, and top tasks productivity insights',
+      () async {
+        final now = DateTime.now();
+        final tasks = [
+          Task(
+            id: 't1',
+            title: 'Algorithms Midterm Prep',
+            category: 'Study',
+            priority: TaskPriority.high,
+            actualMinutes: 90,
+            estimatedMinutes: 120,
+            createdAt: now,
+          ),
+          Task(
+            id: 't2',
+            title: 'App UI Refactor',
+            category: 'Work',
+            priority: TaskPriority.medium,
+            actualMinutes: 60,
+            estimatedMinutes: 60,
+            createdAt: now,
+          ),
+          Task(
+            id: 't3',
+            title: 'Read Article',
+            priority: TaskPriority.low,
+            actualMinutes: 30,
+            createdAt: now,
+          ),
+        ];
+
+        fakeTaskRepository.emitTasks(tasks);
+        await Future<void>.delayed(Duration.zero);
+
+        // Categories: Study (90m = 50%), Work (60m = 33.3%), General (30m = 16.7%)
+        expect(cubit.state.categoryInsights.length, 3);
+        expect(cubit.state.categoryInsights[0].category, 'Study');
+        expect(cubit.state.categoryInsights[0].minutes, 90);
+        expect(cubit.state.categoryInsights[0].percentage, closeTo(0.5, 0.01));
+        expect(cubit.state.categoryInsights[1].category, 'Work');
+        expect(cubit.state.categoryInsights[2].category, 'General');
+
+        // Priorities: High (90m), Medium (60m), Low (30m)
+        expect(cubit.state.priorityInsights.length, 3);
+        final highInsight = cubit.state.priorityInsights.firstWhere(
+          (p) => p.priority == TaskPriority.high,
+        );
+        expect(highInsight.minutes, 90);
+        expect(highInsight.percentage, closeTo(90 / 180, 0.01));
+
+        // Top tasks: t1 (90m), t2 (60m), t3 (30m)
+        expect(cubit.state.topTasksInsights.length, 3);
+        expect(
+          cubit.state.topTasksInsights[0].title,
+          'Algorithms Midterm Prep',
+        );
+        expect(cubit.state.topTasksInsights[0].actualMinutes, 90);
+      },
+    );
   });
 }
