@@ -306,5 +306,63 @@ void main() {
         expect(cubit.state.topTasksInsights[0].actualMinutes, 90);
       },
     );
+
+    test('calculates weeklyReview with comparison and top tasks', () async {
+      final now = DateTime(2026, 11, 5, 12, 0);
+      final customCubit = TodayCubit(
+        sessionRepository: fakeSessionRepository,
+        taskRepository: fakeTaskRepository,
+        nowProvider: () => now,
+      );
+
+      // Save a session this week (e.g. yesterday)
+      await fakeSessionRepository.saveSession(
+        FocusSession(
+          id: 's_this_week',
+          mode: FocusMode.work,
+          completedAt: now.subtract(const Duration(days: 1)),
+          durationSeconds: 3600, // 60 mins
+        ),
+      );
+
+      // Save a session previous week (e.g. 8 days ago)
+      await fakeSessionRepository.saveSession(
+        FocusSession(
+          id: 's_prev_week',
+          mode: FocusMode.work,
+          completedAt: now.subtract(const Duration(days: 8)),
+          durationSeconds: 1800, // 30 mins
+        ),
+      );
+
+      // Save a task with focus time
+      await fakeTaskRepository.saveTask(
+        Task(
+          id: 't_review',
+          title: 'Review Task',
+          category: 'Development',
+          priority: TaskPriority.high,
+          actualMinutes: 60,
+          isCompleted: true,
+          createdAt: now.subtract(const Duration(days: 2)),
+          completedAt: now.subtract(const Duration(days: 1)),
+        ),
+      );
+
+      await customCubit.refresh();
+
+      final review = customCubit.state.weeklyReview;
+      expect(review, isNotNull);
+      expect(review!.focusMinutesThisWeek, 60);
+      expect(review.focusMinutesPreviousWeek, 30);
+      expect(review.changePercentage, 100.0);
+      expect(review.completedSessionsCount, 1);
+      expect(review.completedTasksCount, 1);
+      expect(review.topCategory, 'Development');
+      expect(review.topTasks.length, 1);
+      expect(review.topTasks.first.title, 'Review Task');
+
+      await customCubit.close();
+    });
   });
 }
