@@ -8,6 +8,7 @@ import 'package:focuspilot/features/today/presentation/widgets/focus_heatmap_car
 import 'package:focuspilot/features/today/presentation/widgets/goal_streaks_card.dart';
 import 'package:focuspilot/features/today/presentation/widgets/metric_cards_row.dart';
 import 'package:focuspilot/features/today/presentation/widgets/priority_tasks_preview.dart';
+import 'package:focuspilot/features/today/presentation/widgets/productivity_insights_card.dart';
 import 'package:focuspilot/features/today/presentation/widgets/quick_start_focus_card.dart';
 import 'package:focuspilot/features/today/presentation/widgets/weekly_analytics_chart.dart';
 
@@ -129,6 +130,14 @@ class TodayScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                 ],
+
+                // Task Productivity Insights (FOC-33)
+                ProductivityInsightsCard(
+                  categoryInsights: state.categoryInsights,
+                  priorityInsights: state.priorityInsights,
+                  topTasksInsights: state.topTasksInsights,
+                ),
+                const SizedBox(height: 24),
 
                 // 7-Day Weekly Analytics Chart (FOC-13)
                 if (state.weeklyMetrics.isNotEmpty) ...[

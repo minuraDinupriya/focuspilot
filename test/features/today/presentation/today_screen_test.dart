@@ -12,6 +12,7 @@ import 'package:focuspilot/features/today/presentation/widgets/focus_heatmap_car
 import 'package:focuspilot/features/today/presentation/widgets/goal_streaks_card.dart';
 import 'package:focuspilot/features/today/presentation/widgets/metric_cards_row.dart';
 import 'package:focuspilot/features/today/presentation/widgets/priority_tasks_preview.dart';
+import 'package:focuspilot/features/today/presentation/widgets/productivity_insights_card.dart';
 import 'package:focuspilot/features/today/presentation/widgets/quick_start_focus_card.dart';
 import 'package:focuspilot/features/today/presentation/widgets/weekly_analytics_chart.dart';
 
@@ -67,6 +68,7 @@ void main() {
         expect(find.byType(DailyGoalRing), findsOneWidget);
         expect(find.byType(MetricCardsRow), findsOneWidget);
         expect(find.byType(GoalStreaksCard), findsOneWidget);
+        expect(find.byType(ProductivityInsightsCard), findsOneWidget);
         expect(find.byType(WeeklyAnalyticsChart), findsOneWidget);
         expect(find.byType(FocusHeatmapCard), findsOneWidget);
         expect(find.byType(QuickStartFocusCard), findsOneWidget);
