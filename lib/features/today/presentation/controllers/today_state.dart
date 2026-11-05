@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
 import 'package:focuspilot/features/today/domain/models/daily_focus_metric.dart';
+import 'package:focuspilot/features/today/domain/models/heatmap_day.dart';
 
 enum TodayStatus { initial, loading, loaded, error }
 
@@ -12,6 +13,7 @@ class TodayState extends Equatable {
     this.completedSessionsToday = 0,
     this.completedTasksToday = 0,
     this.weeklyMetrics = const [],
+    this.heatmapDays = const [],
     this.currentStreakDays = 0,
     this.priorityTasks = const [],
     this.errorMessage,
@@ -23,6 +25,7 @@ class TodayState extends Equatable {
   final int completedSessionsToday;
   final int completedTasksToday;
   final List<DailyFocusMetric> weeklyMetrics;
+  final List<HeatmapDay> heatmapDays;
   final int currentStreakDays;
   final List<Task> priorityTasks;
   final String? errorMessage;
@@ -41,6 +44,11 @@ class TodayState extends Equatable {
     return highest > 60 ? highest : 60;
   }
 
+  int get totalHeatmapMinutes =>
+      heatmapDays.fold<int>(0, (sum, d) => sum + d.focusMinutes);
+
+  double get totalHeatmapHours => totalHeatmapMinutes / 60.0;
+
   TodayState copyWith({
     TodayStatus? status,
     int? focusMinutesToday,
@@ -48,6 +56,7 @@ class TodayState extends Equatable {
     int? completedSessionsToday,
     int? completedTasksToday,
     List<DailyFocusMetric>? weeklyMetrics,
+    List<HeatmapDay>? heatmapDays,
     int? currentStreakDays,
     List<Task>? priorityTasks,
     String? errorMessage,
@@ -60,6 +69,7 @@ class TodayState extends Equatable {
           completedSessionsToday ?? this.completedSessionsToday,
       completedTasksToday: completedTasksToday ?? this.completedTasksToday,
       weeklyMetrics: weeklyMetrics ?? this.weeklyMetrics,
+      heatmapDays: heatmapDays ?? this.heatmapDays,
       currentStreakDays: currentStreakDays ?? this.currentStreakDays,
       priorityTasks: priorityTasks ?? this.priorityTasks,
       errorMessage: errorMessage,
@@ -74,6 +84,7 @@ class TodayState extends Equatable {
     completedSessionsToday,
     completedTasksToday,
     weeklyMetrics,
+    heatmapDays,
     currentStreakDays,
     priorityTasks,
     errorMessage,
