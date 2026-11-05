@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:focuspilot/features/tasks/domain/models/recurrence_rule.dart';
 import 'package:focuspilot/features/tasks/domain/models/subtask.dart';
 import 'package:focuspilot/features/tasks/domain/models/task_priority.dart';
 import 'package:uuid/uuid.dart';
@@ -44,6 +45,41 @@ class Task extends Equatable {
   bool get isOverdue {
     if (isCompleted || dueDate == null) return false;
     return dueDate!.isBefore(DateTime.now());
+  }
+
+  bool get isRecurring => recurrenceRule != null && recurrenceRule != 'none';
+
+  RecurrenceType get recurrenceType =>
+      RecurrenceType.fromString(recurrenceRule);
+
+  Task? createNextRecurringInstance() {
+    if (!isRecurring) return null;
+    final baseDate = dueDate ?? DateTime.now();
+    final nextDueDate = recurrenceType.calculateNextDueDate(baseDate);
+
+    final nextTaskId = const Uuid().v4();
+    final nextSubtasks = subtasks.map((s) {
+      return Subtask.create(
+        taskId: nextTaskId,
+        title: s.title,
+        orderIndex: s.orderIndex,
+      );
+    }).toList();
+
+    return Task(
+      id: nextTaskId,
+      title: title,
+      description: description,
+      isCompleted: false,
+      priority: priority,
+      dueDate: nextDueDate,
+      createdAt: DateTime.now(),
+      category: category,
+      tags: tags,
+      estimatedMinutes: estimatedMinutes,
+      recurrenceRule: recurrenceRule,
+      subtasks: nextSubtasks,
+    );
   }
 
   factory Task.create({

@@ -175,5 +175,35 @@ void main() {
       final subtaskRows = await database.select(database.subtaskEntries).get();
       expect(subtaskRows, isEmpty);
     });
+
+    test(
+      'completing a recurring task automatically schedules the next instance',
+      () async {
+        final recurringTask = Task(
+          id: 'rec-1',
+          title: 'Daily Review',
+          recurrenceRule: 'daily',
+          dueDate: DateTime(2026, 11, 4, 18, 0),
+          createdAt: DateTime(2026, 11, 4),
+        );
+
+        await repository.saveTask(recurringTask);
+
+        // Complete the task
+        await repository.toggleTaskCompletion('rec-1');
+
+        final tasks = await repository.getTasks();
+        // Expect 2 tasks: the completed original + the new active instance
+        expect(tasks.length, 2);
+
+        final completedOriginal = tasks.firstWhere((t) => t.id == 'rec-1');
+        expect(completedOriginal.isCompleted, isTrue);
+
+        final nextInstance = tasks.firstWhere((t) => t.id != 'rec-1');
+        expect(nextInstance.title, 'Daily Review');
+        expect(nextInstance.isCompleted, isFalse);
+        expect(nextInstance.dueDate, DateTime(2026, 11, 5, 18, 0));
+      },
+    );
   });
 }
