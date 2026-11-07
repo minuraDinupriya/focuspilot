@@ -67,6 +67,8 @@ class TaskItemTile extends StatelessWidget {
                     children: [
                       Text(
                         task.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.bodyLarge?.copyWith(
                           decoration: task.isCompleted
                               ? TextDecoration.lineThrough
@@ -89,57 +91,52 @@ class TaskItemTile extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
-                      if (task.category != null ||
-                          task.subtasks.isNotEmpty ||
-                          task.dueDate != null ||
-                          task.estimatedMinutes != null ||
-                          task.actualMinutes > 0 ||
-                          task.isRecurring) ...[
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 4,
-                          children: [
-                            if (task.category != null)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.secondaryContainer,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  task.category!,
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color:
-                                        theme.colorScheme.onSecondaryContainer,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          TaskPriorityChip(priority: task.priority),
+                          if (task.category != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.secondaryContainer,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                task.category!,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.colorScheme.onSecondaryContainer,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                            if (task.isRecurring)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color:
-                                      theme.colorScheme.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.repeat,
-                                      size: 12,
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
-                                    const SizedBox(width: 3),
-                                    Text(
+                            ),
+                          if (task.isRecurring)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color:
+                                    theme.colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.repeat,
+                                    size: 12,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Flexible(
+                                    child: Text(
                                       task.recurrenceType.displayName,
                                       style: theme.textTheme.labelSmall
                                           ?.copyWith(
@@ -148,30 +145,32 @@ class TaskItemTile extends StatelessWidget {
                                                 .onSurfaceVariant,
                                           ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                            if (task.subtasks.isNotEmpty)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color:
-                                      theme.colorScheme.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.checklist,
-                                      size: 12,
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
-                                    const SizedBox(width: 3),
-                                    Text(
+                            ),
+                          if (task.subtasks.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color:
+                                    theme.colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.checklist,
+                                    size: 12,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Flexible(
+                                    child: Text(
                                       '${task.completedSubtasksCount}/${task.subtasks.length}',
                                       style: theme.textTheme.labelSmall
                                           ?.copyWith(
@@ -180,93 +179,88 @@ class TaskItemTile extends StatelessWidget {
                                                 .onSurfaceVariant,
                                           ),
                                     ),
-                                  ],
-                                ),
-                              ),
-                            if (task.dueDate != null)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: task.isOverdue
-                                      ? theme.colorScheme.errorContainer
-                                      : theme
-                                            .colorScheme
-                                            .surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  task.isOverdue
-                                      ? 'Overdue'
-                                      : '${task.dueDate!.month}/${task.dueDate!.day}',
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: task.isOverdue
-                                        ? theme.colorScheme.onErrorContainer
-                                        : theme.colorScheme.onSurfaceVariant,
-                                    fontWeight: task.isOverdue
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
                                   ),
-                                ),
-                              ),
-                            if (task.estimatedMinutes != null ||
-                                task.actualMinutes > 0)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: task.isOverEstimated
-                                      ? theme.colorScheme.errorContainer
-                                      : theme
-                                            .colorScheme
-                                            .surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  task.estimatedMinutes != null
-                                      ? (task.actualMinutes > 0
-                                            ? '⏱️ ${task.actualMinutes}m / ${task.estimatedMinutes}m'
-                                            : '⏱️ ${task.estimatedMinutes}m')
-                                      : '⏱️ ${task.actualMinutes}m logged',
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: task.isOverEstimated
-                                        ? theme.colorScheme.onErrorContainer
-                                        : theme.colorScheme.onSurfaceVariant,
-                                    fontWeight: task.isOverEstimated
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        if (task.timeProgress != null) ...[
-                          const SizedBox(height: 6),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(2),
-                            child: LinearProgressIndicator(
-                              value: task.timeProgress,
-                              minHeight: 3,
-                              backgroundColor:
-                                  theme.colorScheme.surfaceContainerHighest,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                task.isOverEstimated
-                                    ? theme.colorScheme.error
-                                    : theme.colorScheme.primary,
+                                ],
                               ),
                             ),
-                          ),
+                          if (task.dueDate != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: task.isOverdue
+                                    ? theme.colorScheme.errorContainer
+                                    : theme.colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                task.isOverdue
+                                    ? 'Overdue'
+                                    : '${task.dueDate!.month}/${task.dueDate!.day}',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: task.isOverdue
+                                      ? theme.colorScheme.onErrorContainer
+                                      : theme.colorScheme.onSurfaceVariant,
+                                  fontWeight: task.isOverdue
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                            ),
+                          if (task.estimatedMinutes != null ||
+                              task.actualMinutes > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: task.isOverEstimated
+                                    ? theme.colorScheme.errorContainer
+                                    : theme.colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                task.estimatedMinutes != null
+                                    ? (task.actualMinutes > 0
+                                          ? '⏱️ ${task.actualMinutes}m / ${task.estimatedMinutes}m'
+                                          : '⏱️ ${task.estimatedMinutes}m')
+                                    : '⏱️ ${task.actualMinutes}m logged',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: task.isOverEstimated
+                                      ? theme.colorScheme.onErrorContainer
+                                      : theme.colorScheme.onSurfaceVariant,
+                                  fontWeight: task.isOverEstimated
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                            ),
                         ],
+                      ),
+                      if (task.timeProgress != null) ...[
+                        const SizedBox(height: 6),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(2),
+                          child: LinearProgressIndicator(
+                            value: task.timeProgress,
+                            minHeight: 3,
+                            backgroundColor:
+                                theme.colorScheme.surfaceContainerHighest,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              task.isOverEstimated
+                                  ? theme.colorScheme.error
+                                  : theme.colorScheme.primary,
+                            ),
+                          ),
+                        ),
                       ],
                     ],
                   ),
                 ),
                 const SizedBox(width: 8),
-                TaskPriorityChip(priority: task.priority),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, size: 20),
                   color: theme.colorScheme.outline,

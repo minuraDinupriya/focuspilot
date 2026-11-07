@@ -21,64 +21,72 @@ class DailyGoalRing extends StatelessWidget {
 
     return Center(
       child: SizedBox(
-        width: 220,
-        height: 220,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Custom circular painter
-            CustomPaint(
-              size: const Size(220, 220),
-              painter: _RingPainter(
-                progress: progress,
-                trackColor: theme.colorScheme.surfaceContainerHighest,
-                progressColor: theme.colorScheme.primary,
-                strokeWidth: 16.0,
+        width: 220 * (MediaQuery.textScalerOf(context).scale(14) / 14),
+        child: AspectRatio(
+          aspectRatio: 1,
+          child: Stack(
+            fit: StackFit.expand,
+            alignment: Alignment.center,
+            children: [
+              // Custom circular painter
+              CustomPaint(
+                painter: _RingPainter(
+                  progress: progress,
+                  trackColor: theme.colorScheme.surfaceContainerHighest,
+                  progressColor: theme.colorScheme.primary,
+                  strokeWidth: 16.0,
+                ),
               ),
-            ),
-            // Inner content
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.local_fire_department_rounded,
-                  color: theme.colorScheme.primary,
-                  size: 32,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$currentMinutes / $goalMinutes',
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+              // Inner content
+              Padding(
+                padding: const EdgeInsets.all(28),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.local_fire_department_rounded,
+                        color: theme.colorScheme.primary,
+                        size: 32,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$currentMinutes / $goalMinutes',
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'focus minutes',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '$percentage% completed',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onPrimaryContainer,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                Text(
-                  'focus minutes',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '$percentage% completed',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );

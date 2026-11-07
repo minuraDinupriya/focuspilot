@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:focuspilot/app/widgets/adaptive_segmented_button.dart';
 import 'package:focuspilot/features/focus/domain/models/focus_mode.dart';
 
 class FocusModeSelector extends StatelessWidget {
@@ -15,7 +16,7 @@ class FocusModeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SegmentedButton<FocusMode>(
+    return AdaptiveSegmentedButton<FocusMode>(
       segments: const [
         ButtonSegment<FocusMode>(
           value: FocusMode.work,

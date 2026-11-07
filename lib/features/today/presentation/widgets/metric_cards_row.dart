@@ -14,35 +14,47 @@ class MetricCardsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _MetricCard(
-            icon: Icons.timer_outlined,
-            title: 'Focus',
-            value: '${focusMinutes}m',
-            color: Colors.indigo,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _MetricCard(
-            icon: Icons.check_circle_outline_rounded,
-            title: 'Sessions',
-            value: '$completedSessions',
-            color: Colors.teal,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _MetricCard(
-            icon: Icons.task_alt_rounded,
-            title: 'Tasks',
-            value: '$completedTasks',
-            color: Colors.deepOrange,
-          ),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        final columns = (constraints.maxWidth / (100 * textScale))
+            .floor()
+            .clamp(1, 3);
+        final cardWidth = (constraints.maxWidth - (columns - 1) * 12) / columns;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            SizedBox(
+              width: cardWidth,
+              child: _MetricCard(
+                icon: Icons.timer_outlined,
+                title: 'Focus',
+                value: '${focusMinutes}m',
+                color: Colors.indigo,
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: _MetricCard(
+                icon: Icons.check_circle_outline_rounded,
+                title: 'Sessions',
+                value: '$completedSessions',
+                color: Colors.teal,
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: _MetricCard(
+                icon: Icons.task_alt_rounded,
+                title: 'Tasks',
+                value: '$completedTasks',
+                color: Colors.deepOrange,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

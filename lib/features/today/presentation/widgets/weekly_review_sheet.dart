@@ -234,8 +234,10 @@ class WeeklyReviewSheet extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            alignment: WrapAlignment.spaceBetween,
             children: [
               Text(
                 'Focus Time',
@@ -266,11 +268,13 @@ class WeeklyReviewSheet extends StatelessWidget {
                       color: trendColor,
                     ),
                     const SizedBox(width: 4),
-                    Text(
-                      review.trendText,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: trendColor,
-                        fontWeight: FontWeight.bold,
+                    Flexible(
+                      child: Text(
+                        review.trendText,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: trendColor,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
@@ -341,7 +345,10 @@ class WeeklyReviewSheet extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final cardWidth = (constraints.maxWidth - 12) / 2;
+        final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        final cardWidth = constraints.maxWidth < 360 * textScale
+            ? constraints.maxWidth
+            : (constraints.maxWidth - 12) / 2;
 
         return Wrap(
           spacing: 12,
@@ -432,8 +439,6 @@ class WeeklyReviewSheet extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w500,
@@ -445,8 +450,6 @@ class WeeklyReviewSheet extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -454,8 +457,6 @@ class WeeklyReviewSheet extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             subtext,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
               fontSize: 11,
@@ -500,8 +501,6 @@ class WeeklyReviewSheet extends StatelessWidget {
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 if (task.category != null &&
                     task.category!.trim().isNotEmpty) ...[
