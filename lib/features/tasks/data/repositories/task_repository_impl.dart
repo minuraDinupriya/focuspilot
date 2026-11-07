@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:focuspilot/features/tasks/data/datasources/database/app_database.dart';
 import 'package:focuspilot/features/tasks/domain/models/subtask.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
+import 'package:focuspilot/features/tasks/domain/models/task_details.dart';
 import 'package:focuspilot/features/tasks/domain/models/task_priority.dart';
 import 'package:focuspilot/features/tasks/domain/repositories/task_repository.dart';
 
@@ -142,6 +143,24 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
+  Future<bool> updateTaskDetails(String id, TaskDetails details) async {
+    final query = _database.update(_database.taskEntries)
+      ..where((table) => table.id.equals(id));
+    final updatedRows = await query.write(
+      TaskEntriesCompanion(
+        title: Value(details.title),
+        priority: Value(details.priority.name),
+        description: Value(details.description),
+        dueDate: Value(details.dueDate),
+        category: Value(details.category),
+        estimatedMinutes: Value(details.estimatedMinutes),
+        recurrenceRule: Value(details.recurrenceRule),
+      ),
+    );
+    return updatedRows > 0;
+  }
+
+  @override
   Future<void> deleteTask(String id) async {
     final subtasksQuery = _database.delete(_database.subtaskEntries)
       ..where((tbl) => tbl.taskId.equals(id));
@@ -153,33 +172,40 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
-  Future<void> toggleTaskCompletion(String id) async {
-    final task = await getTaskById(id);
-    if (task == null) return;
+  Future<void> toggleTaskCompletion(String id) {
+    return _database.transaction(() async {
+      final task = await getTaskById(id);
+      if (task == null) return;
 
-    final updatedIsCompleted = !task.isCompleted;
-    final updated = task.copyWith(
-      isCompleted: updatedIsCompleted,
-      completedAt: updatedIsCompleted ? DateTime.now() : null,
-      clearCompletedAt: !updatedIsCompleted,
-    );
-    await saveTask(updated);
+      final isCompleted = !task.isCompleted;
+      final query = _database.update(_database.taskEntries)
+        ..where((table) => table.id.equals(id));
+      await query.write(
+        TaskEntriesCompanion(
+          isCompleted: Value(isCompleted),
+          completedAt: Value(isCompleted ? DateTime.now() : null),
+        ),
+      );
 
-    if (updatedIsCompleted && task.isRecurring) {
-      final nextInstance = task.createNextRecurringInstance();
-      if (nextInstance != null) {
-        await saveTask(nextInstance);
+      if (isCompleted) {
+        final nextInstance = task.createNextRecurringInstance();
+        if (nextInstance != null) {
+          await saveTask(nextInstance);
+        }
       }
-    }
+    });
   }
 
   @override
   Future<void> addActualMinutes(String taskId, int minutes) async {
-    final task = await getTaskById(taskId);
-    if (task == null) return;
-
-    final updated = task.copyWith(actualMinutes: task.actualMinutes + minutes);
-    await saveTask(updated);
+    final tasks = _database.taskEntries;
+    final query = _database.update(tasks)
+      ..where((table) => table.id.equals(taskId));
+    await query.write(
+      TaskEntriesCompanion.custom(
+        actualMinutes: tasks.actualMinutes + Variable<int>(minutes),
+      ),
+    );
   }
 
   @override

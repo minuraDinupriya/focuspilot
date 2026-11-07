@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:focuspilot/features/tasks/data/datasources/database/app_database.dart';
 import 'package:focuspilot/features/tasks/data/repositories/task_repository_impl.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
+import 'package:focuspilot/features/tasks/domain/models/task_details.dart';
 import 'package:focuspilot/features/tasks/domain/models/task_priority.dart';
 
 void main() {
@@ -137,6 +138,64 @@ void main() {
       },
     );
 
+    test('updateTaskDetails changes only editable fields', () async {
+      await repository.saveTask(
+        task1.copyWith(
+          dueDate: DateTime(2026, 11, 2),
+          category: 'School',
+          estimatedMinutes: 45,
+          actualMinutes: 15,
+          recurrenceRule: 'weekly',
+          tags: const ['cs101'],
+          isCompleted: true,
+          completedAt: DateTime(2026, 11, 1, 9, 30),
+        ),
+      );
+      await repository.addSubtask(task1.id, 'Read notes');
+      await repository.addSubtask(task1.id, 'Old exercise');
+      final beforeEditing = (await repository.getTaskById(task1.id))!;
+
+      await repository.toggleSubtaskCompletion(beforeEditing.subtasks[0].id);
+      await repository.deleteSubtask(beforeEditing.subtasks[1].id);
+      await repository.addSubtask(task1.id, 'New exercise');
+      await repository.addActualMinutes(task1.id, 25);
+      final current = (await repository.getTaskById(task1.id))!;
+
+      expect(
+        await repository.updateTaskDetails(
+          task1.id,
+          const TaskDetails(title: 'Review graphs', priority: TaskPriority.low),
+        ),
+        isTrue,
+      );
+      expect(
+        await repository.getTaskById(task1.id),
+        current.copyWith(
+          title: 'Review graphs',
+          priority: TaskPriority.low,
+          clearDescription: true,
+          clearDueDate: true,
+          clearCategory: true,
+          clearEstimatedMinutes: true,
+          clearRecurrenceRule: true,
+        ),
+      );
+    });
+
+    test('updateTaskDetails does not recreate a deleted task', () async {
+      await repository.saveTask(task1);
+      await repository.deleteTask(task1.id);
+
+      expect(
+        await repository.updateTaskDetails(
+          task1.id,
+          const TaskDetails(title: 'Review graphs', priority: TaskPriority.low),
+        ),
+        isFalse,
+      );
+      expect(await repository.getTaskById(task1.id), isNull);
+    });
+
     test('addActualMinutes increments actualMinutes on task', () async {
       await repository.saveTask(task1);
       expect((await repository.getTaskById('task-1'))!.actualMinutes, 0);
@@ -146,6 +205,68 @@ void main() {
 
       await repository.addActualMinutes('task-1', 25);
       expect((await repository.getTaskById('task-1'))!.actualMinutes, 50);
+    });
+
+    test('concurrent focus time and task edits both persist', () async {
+      await repository.saveTask(task1);
+      final dueDate = DateTime(2026, 11, 2);
+
+      await Future.wait([
+        repository.addActualMinutes(task1.id, 25),
+        repository.updateTaskDetails(
+          task1.id,
+          TaskDetails(
+            title: 'Review graphs',
+            priority: TaskPriority.low,
+            description: 'Practice topological sorting',
+            dueDate: dueDate,
+            category: 'School',
+            estimatedMinutes: 45,
+            recurrenceRule: 'weekly',
+          ),
+        ),
+        repository.addActualMinutes(task1.id, 10),
+      ]);
+
+      expect(
+        await repository.getTaskById(task1.id),
+        task1.copyWith(
+          title: 'Review graphs',
+          priority: TaskPriority.low,
+          description: 'Practice topological sorting',
+          dueDate: dueDate,
+          category: 'School',
+          estimatedMinutes: 45,
+          actualMinutes: 35,
+          recurrenceRule: 'weekly',
+        ),
+      );
+    });
+
+    test('completing a task preserves concurrent edits and progress', () async {
+      await repository.saveTask(task1);
+      await repository.addSubtask(task1.id, 'Read notes');
+      final original = (await repository.getTaskById(task1.id))!;
+      final subtaskId = original.subtasks.single.id;
+
+      await Future.wait([
+        repository.toggleTaskCompletion(task1.id),
+        repository.updateTaskDetails(
+          task1.id,
+          const TaskDetails(title: 'Review graphs', priority: TaskPriority.low),
+        ),
+        repository.addActualMinutes(task1.id, 25),
+        repository.toggleSubtaskCompletion(subtaskId),
+      ]);
+
+      final updated = (await repository.getTaskById(task1.id))!;
+      expect(updated.isCompleted, isTrue);
+      expect(updated.completedAt, isNotNull);
+      expect(updated.title, 'Review graphs');
+      expect(updated.priority, TaskPriority.low);
+      expect(updated.description, isNull);
+      expect(updated.actualMinutes, 25);
+      expect(updated.subtasks.single.isCompleted, isTrue);
     });
 
     test(
