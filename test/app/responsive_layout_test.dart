@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:focuspilot/app/app_shell.dart';
 import 'package:focuspilot/app/theme/app_theme.dart';
 import 'package:focuspilot/features/focus/domain/models/focus_mode.dart';
 import 'package:focuspilot/features/focus/domain/models/focus_session.dart';
 import 'package:focuspilot/features/focus/domain/models/ticker.dart';
 import 'package:focuspilot/features/focus/presentation/controllers/focus_bloc.dart';
+import 'package:focuspilot/features/focus/presentation/controllers/focus_event.dart';
 import 'package:focuspilot/features/focus/presentation/controllers/focus_state.dart';
 import 'package:focuspilot/features/focus/presentation/focus_screen.dart';
 import 'package:focuspilot/features/focus/presentation/widgets/circular_timer_display.dart';
@@ -31,6 +33,9 @@ class _SilentTicker extends Ticker {
 
   @override
   Stream<int> tick({required int ticks}) => const Stream.empty();
+
+  @override
+  Stream<void> pulse() => const Stream.empty();
 }
 
 void main() {
@@ -43,7 +48,11 @@ void main() {
   late Task task;
   late InMemorySettingsRepository settings;
 
-  Future<void> initialize({bool withSessions = true}) async {
+  Future<void> initialize({
+    bool withSessions = true,
+    int? overtimeSeconds,
+    DateTime Function()? now,
+  }) async {
     tasks = FakeTaskRepository();
     sessions = FakeFocusSessionRepository();
     task = Task(
@@ -81,10 +90,15 @@ void main() {
     focusBloc = FocusBloc(
       ticker: const _SilentTicker(),
       sessionRepository: sessions,
+      now: now,
       initialState: FocusState(
+        status: overtimeSeconds == null
+            ? FocusStatus.initial
+            : FocusStatus.running,
         linkedTask: task,
-        durationSeconds: 1500,
+        durationSeconds: overtimeSeconds == null ? 1500 : 0,
         totalDurationSeconds: 1500,
+        overtimeSeconds: overtimeSeconds,
       ),
     );
   }
@@ -220,6 +234,46 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('flow time and both finish actions fit at large text', (
+    tester,
+  ) async {
+    await initialize(overtimeSeconds: 125 * 60 + 7);
+    await pumpPage(tester, const FocusScreen(), scale: 2, dark: true);
+
+    final timer = tester.getRect(find.byType(CircularTimerDisplay));
+    final time = tester.getRect(find.text('+125:07'));
+    expect(timer.contains(time.topLeft), isTrue);
+    expect(timer.contains(time.bottomRight), isTrue);
+    for (final label in ['Finish focus', 'Log planned time only']) {
+      final action = find.text(label);
+      await tester.ensureVisible(action);
+      final rect = tester.getRect(action);
+      expect(rect.left, greaterThanOrEqualTo(20));
+      expect(rect.right, lessThanOrEqualTo(300));
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('foreground catch-up keeps flow time when Today is visible', (
+    tester,
+  ) async {
+    var now = DateTime.now();
+    await initialize(withSessions: false, now: () => now);
+    await pumpPage(tester, const AppShell(), width: 800);
+    expect(find.byType(TodayScreen), findsOneWidget);
+
+    focusBloc.add(const FocusStarted(durationSeconds: 25 * 60));
+    await tester.pumpAndSettle();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    now = now.add(const Duration(minutes: 28, seconds: 15));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+
+    expect(focusBloc.state.overtimeSeconds, 195);
+    expect(focusBloc.state.linkedTask?.id, task.id);
+    expect(find.byType(TodayScreen), findsOneWidget);
+  });
 
   testWidgets('custom duration dialog fits large text with keyboard', (
     tester,

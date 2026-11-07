@@ -15,8 +15,27 @@ class AppShell extends StatefulWidget {
   State<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell> {
+class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      context.read<FocusBloc>().add(const FocusAppForegrounded());
+    }
+  }
 
   void _onDestinationSelected(int index) {
     setState(() {
@@ -31,10 +50,10 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _onFocusTask(Task task) {
-    // 1. Link the task directly into the FocusBloc
-    context.read<FocusBloc>().add(FocusTaskLinked(task: task));
-
-    // 2. Switch tab to Focus
+    final bloc = context.read<FocusBloc>();
+    if (!bloc.state.isOvertime && !bloc.state.isSaving) {
+      bloc.add(FocusTaskLinked(task: task));
+    }
     _navigateToFocus();
   }
 

@@ -9,10 +9,12 @@ class FocusTaskSelector extends StatelessWidget {
     super.key,
     required this.linkedTask,
     required this.onTaskSelected,
+    this.enabled = true,
   });
 
   final Task? linkedTask;
   final ValueChanged<Task?> onTaskSelected;
+  final bool enabled;
 
   void _showTaskPicker(BuildContext context) {
     final tasksCubit = context.read<TasksCubit>();
@@ -145,7 +147,7 @@ class FocusTaskSelector extends StatelessWidget {
             IconButton(
               tooltip: 'Unlink task',
               icon: const Icon(Icons.close),
-              onPressed: () => onTaskSelected(null),
+              onPressed: enabled ? () => onTaskSelected(null) : null,
             ),
           ],
         ),
@@ -155,7 +157,7 @@ class FocusTaskSelector extends StatelessWidget {
     return ActionChip(
       avatar: const Icon(Icons.add, size: 18),
       label: const Text('Tag a Task'),
-      onPressed: () => _showTaskPicker(context),
+      onPressed: enabled ? () => _showTaskPicker(context) : null,
     );
   }
 }

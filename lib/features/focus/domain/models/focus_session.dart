@@ -37,6 +37,7 @@ class FocusSession extends Equatable {
   factory FocusSession.create({
     required FocusMode mode,
     required int durationSeconds,
+    DateTime? completedAt,
     String? taskId,
     int distractionCount = 0,
     SessionStatus status = SessionStatus.completed,
@@ -45,7 +46,7 @@ class FocusSession extends Equatable {
       id: const Uuid().v4(),
       mode: mode,
       durationSeconds: durationSeconds,
-      completedAt: DateTime.now(),
+      completedAt: completedAt ?? DateTime.now(),
       taskId: taskId,
       distractionCount: distractionCount,
       status: status,

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -35,6 +36,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     on<FocusAppForegrounded>(_onAppForegrounded);
     on<FocusDistractionRecorded>(_onDistractionRecorded);
     on<FocusSkipped>(_onSkipped);
+    on<FocusOvertimeFinished>(_onOvertimeFinished);
 
     add(const FocusSessionsCountRefreshed());
 
@@ -50,72 +52,221 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
   final SettingsRepository? settingsRepository;
   final TaskRepository? taskRepository;
   final DateTime Function() now;
-  StreamSubscription<int>? _tickerSubscription;
+  StreamSubscription<void>? _tickerSubscription;
   StreamSubscription<UserSettings>? _settingsSubscription;
   UserSettings _settings = const UserSettings();
+  FocusSession? _workCheckpoint;
+  Future<bool>? _checkpointSave;
 
-  int _durationForMode(FocusMode mode, UserSettings settings) {
-    switch (mode) {
-      case FocusMode.work:
-        return settings.workDurationSeconds;
-      case FocusMode.shortBreak:
-        return settings.shortBreakDurationSeconds;
-      case FocusMode.longBreak:
-        return settings.longBreakDurationSeconds;
+  int _durationForMode(FocusMode mode) => switch (mode) {
+    FocusMode.work => _settings.workDurationSeconds,
+    FocusMode.shortBreak => _settings.shortBreakDurationSeconds,
+    FocusMode.longBreak => _settings.longBreakDurationSeconds,
+  };
+
+  FocusState _readyState(FocusState previous, FocusMode mode) {
+    final duration = _durationForMode(mode);
+    return previous.copyWith(
+      status: FocusStatus.initial,
+      mode: mode,
+      durationSeconds: duration,
+      totalDurationSeconds: duration,
+      clearTargetEndTime: true,
+      clearOvertime: true,
+      distractionCount: 0,
+      hasSaveError: false,
+    );
+  }
+
+  void _stopTicker() {
+    unawaited(_tickerSubscription?.cancel());
+    _tickerSubscription = null;
+  }
+
+  void _startTicker({int? countdownSeconds}) {
+    _stopTicker();
+    if (countdownSeconds == null) {
+      _tickerSubscription = ticker.pulse().listen(
+        (_) => add(const FocusTicked()),
+      );
+    } else {
+      _tickerSubscription = ticker
+          .tick(ticks: countdownSeconds)
+          .listen((duration) => add(FocusTicked(durationSeconds: duration)));
     }
+  }
+
+  void _startCountdown(Emitter<FocusState> emit, FocusState next) {
+    if (emit.isDone) return;
+    final seconds = next.durationSeconds;
+    emit(
+      next.copyWith(
+        status: FocusStatus.running,
+        targetEndTime: now().add(Duration(seconds: seconds)),
+      ),
+    );
+    _startTicker(countdownSeconds: seconds);
   }
 
   void _onStarted(FocusStarted event, Emitter<FocusState> emit) {
-    final target = now().add(Duration(seconds: event.durationSeconds));
-    emit(
-      state.copyWith(
-        status: FocusStatus.running,
-        durationSeconds: event.durationSeconds,
-        totalDurationSeconds: event.durationSeconds,
-        targetEndTime: target,
-      ),
-    );
+    if (!state.isInitial && !state.isCompleted) return;
 
-    _tickerSubscription?.cancel();
-    _tickerSubscription = ticker
-        .tick(ticks: event.durationSeconds)
-        .listen((duration) => add(FocusTicked(durationSeconds: duration)));
+    final duration = event.durationSeconds > 0
+        ? event.durationSeconds
+        : _durationForMode(state.mode);
+    _startCountdown(
+      emit,
+      state.copyWith(durationSeconds: duration, totalDurationSeconds: duration),
+    );
   }
 
-  Future<void> _onTicked(FocusTicked event, Emitter<FocusState> emit) async {
-    final int remaining;
-    if (state.targetEndTime != null) {
-      final diff = state.targetEndTime!.difference(now()).inSeconds;
-      if (event.durationSeconds != null && event.durationSeconds! <= 0) {
-        remaining = 0;
-      } else {
-        remaining = diff < 0 ? 0 : diff;
-      }
-    } else {
-      remaining = event.durationSeconds ?? (state.durationSeconds - 1);
-    }
+  int _remainingSeconds(DateTime deadline, DateTime current) {
+    final remaining = deadline.difference(current).inMicroseconds;
+    const microsPerSecond = Duration.microsecondsPerSecond;
+    return math.max(0, (remaining + microsPerSecond - 1) ~/ microsPerSecond);
+  }
 
-    if (remaining > 0) {
-      emit(
-        state.copyWith(status: FocusStatus.running, durationSeconds: remaining),
-      );
-    } else {
-      await _completeSession(emit);
-    }
+  int _overtimeAt(DateTime current) {
+    final displayed = state.overtimeSeconds ?? 0;
+    final start = state.targetEndTime;
+    return start == null
+        ? displayed
+        : math.max(displayed, current.difference(start).inSeconds);
+  }
+
+  Future<void> _onTicked(FocusTicked event, Emitter<FocusState> emit) {
+    return _reconcileClock(emit, lastCountdownTick: event.durationSeconds == 0);
   }
 
   Future<void> _onAppForegrounded(
     FocusAppForegrounded event,
     Emitter<FocusState> emit,
-  ) async {
-    if (!state.isRunning || state.targetEndTime == null) return;
+  ) => _reconcileClock(emit);
 
-    final remaining = state.targetEndTime!.difference(now()).inSeconds;
-    if (remaining <= 0) {
-      await _completeSession(emit);
-    } else {
-      emit(state.copyWith(durationSeconds: remaining));
+  Future<void> _onPaused(FocusPaused event, Emitter<FocusState> emit) {
+    return _reconcileClock(emit, pause: true);
+  }
+
+  Future<void> _reconcileClock(
+    Emitter<FocusState> emit, {
+    bool pause = false,
+    bool lastCountdownTick = false,
+  }) async {
+    if (!state.isRunning) return;
+
+    final current = now();
+    final deadline = state.targetEndTime;
+    if (state.isOvertime || deadline == null || current.isBefore(deadline)) {
+      final remaining = deadline == null || state.isOvertime
+          ? state.durationSeconds
+          : _remainingSeconds(deadline, current);
+      if (pause) _stopTicker();
+      emit(
+        state.copyWith(
+          status: pause ? FocusStatus.paused : FocusStatus.running,
+          durationSeconds: remaining,
+          overtimeSeconds: state.isOvertime ? _overtimeAt(current) : null,
+          clearTargetEndTime: pause,
+        ),
+      );
+      if (!pause &&
+          !state.isOvertime &&
+          lastCountdownTick &&
+          deadline != null) {
+        // The countdown stream can finish early after a clock adjustment.
+        _startTicker(countdownSeconds: remaining);
+      }
+      return;
     }
+
+    if (state.mode == FocusMode.work) {
+      await _beginOvertime(emit, deadline, current, pause: pause);
+    } else {
+      await _completeBreak(emit);
+    }
+  }
+
+  Future<void> _beginOvertime(
+    Emitter<FocusState> emit,
+    DateTime deadline,
+    DateTime current, {
+    required bool pause,
+  }) async {
+    final checkpoint = FocusSession.create(
+      mode: FocusMode.work,
+      durationSeconds: state.totalDurationSeconds,
+      completedAt: deadline,
+      taskId: state.linkedTask?.id,
+      distractionCount: state.distractionCount,
+    );
+    _workCheckpoint = checkpoint;
+    _stopTicker();
+    emit(
+      state.copyWith(
+        status: pause ? FocusStatus.paused : FocusStatus.running,
+        durationSeconds: 0,
+        overtimeSeconds: current.difference(deadline).inSeconds,
+        clearTargetEndTime: pause,
+      ),
+    );
+    if (!pause) _startTicker();
+    _signalIntervalEnded();
+
+    final save = _recordSession(checkpoint);
+    _checkpointSave = save;
+    if (await save) {
+      final summary = await _withUpdatedSummary(state);
+      if (!emit.isDone && !state.isSaving && _workCheckpoint == checkpoint) {
+        emit(
+          state.copyWith(
+            sessionsCompletedToday: summary.sessionsCompletedToday,
+            linkedTask: summary.linkedTask,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _onOvertimeFinished(
+    FocusOvertimeFinished event,
+    Emitter<FocusState> emit,
+  ) async {
+    final checkpoint = _workCheckpoint;
+    if (checkpoint == null || state.isSaving) return;
+
+    final overtime = _overtimeAt(now());
+    final session = FocusSession(
+      id: checkpoint.id,
+      mode: checkpoint.mode,
+      durationSeconds:
+          checkpoint.durationSeconds + (event.includeOvertime ? overtime : 0),
+      completedAt: checkpoint.completedAt,
+      taskId: checkpoint.taskId,
+      distractionCount: event.includeOvertime
+          ? state.distractionCount
+          : checkpoint.distractionCount,
+    );
+    _stopTicker();
+    emit(
+      state.copyWith(
+        status: FocusStatus.saving,
+        overtimeSeconds: overtime,
+        clearTargetEndTime: true,
+        hasSaveError: false,
+      ),
+    );
+
+    // Use the same row for the planned work and the user's final duration.
+    await _checkpointSave;
+    if (!await _recordSession(session)) {
+      emit(state.copyWith(status: FocusStatus.paused, hasSaveError: true));
+      return;
+    }
+
+    _workCheckpoint = null;
+    _checkpointSave = null;
+    final summary = await _withUpdatedSummary(state);
+    _moveToNextTimer(emit, summary);
   }
 
   void _onDistractionRecorded(
@@ -128,196 +279,146 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
   }
 
   Future<void> _onSkipped(FocusSkipped event, Emitter<FocusState> emit) async {
-    await _tickerSubscription?.cancel();
+    if (state.isOvertime || state.isSaving) return;
 
-    Task? updatedTask = state.linkedTask;
-    final elapsedSeconds = state.totalDurationSeconds - state.durationSeconds;
-    if (elapsedSeconds > 0) {
-      try {
-        final session = FocusSession.create(
+    final current = now();
+    final deadline = state.targetEndTime;
+    if (state.isRunning && deadline != null && !current.isBefore(deadline)) {
+      await _reconcileClock(emit);
+      return;
+    }
+
+    _stopTicker();
+    if (!state.isRunning && !state.isPaused) {
+      _moveToNextTimer(emit, state);
+      return;
+    }
+
+    final remaining = deadline == null
+        ? state.durationSeconds
+        : _remainingSeconds(deadline, current);
+    final elapsed = state.totalDurationSeconds - remaining;
+    if (elapsed > 0) {
+      emit(
+        state.copyWith(status: FocusStatus.saving, clearTargetEndTime: true),
+      );
+      await _recordSession(
+        FocusSession.create(
           mode: state.mode,
-          durationSeconds: elapsedSeconds,
+          durationSeconds: elapsed,
+          completedAt: current,
           taskId: state.linkedTask?.id,
           distractionCount: state.distractionCount,
           status: SessionStatus.skipped,
-        );
-        await sessionRepository.saveSession(session);
-
-        if (state.mode == FocusMode.work &&
-            state.linkedTask != null &&
-            taskRepository != null) {
-          final minutes = (elapsedSeconds / 60).round();
-          if (minutes > 0) {
-            await taskRepository!.addActualMinutes(
-              state.linkedTask!.id,
-              minutes,
-            );
-            updatedTask = state.linkedTask!.copyWith(
-              actualMinutes: state.linkedTask!.actualMinutes + minutes,
-            );
-          }
-        }
-      } catch (_) {}
-    }
-
-    final nextMode = state.mode == FocusMode.work
-        ? FocusMode.shortBreak
-        : FocusMode.work;
-    final nextDuration = _durationForMode(nextMode, _settings);
-
-    if (_settings.autoStartNextSession) {
-      final target = now().add(Duration(seconds: nextDuration));
-      emit(
-        state.copyWith(
-          status: FocusStatus.running,
-          mode: nextMode,
-          durationSeconds: nextDuration,
-          totalDurationSeconds: nextDuration,
-          targetEndTime: target,
-          distractionCount: 0,
-          linkedTask: updatedTask,
         ),
       );
-      _tickerSubscription = ticker
-          .tick(ticks: nextDuration)
-          .listen((duration) => add(FocusTicked(durationSeconds: duration)));
+      final summary = await _withUpdatedSummary(state);
+      _moveToNextTimer(emit, summary);
     } else {
-      emit(
-        state.copyWith(
-          status: FocusStatus.initial,
-          mode: nextMode,
-          durationSeconds: nextDuration,
-          totalDurationSeconds: nextDuration,
-          clearTargetEndTime: true,
-          distractionCount: 0,
-          linkedTask: updatedTask,
-        ),
-      );
+      _moveToNextTimer(emit, state);
     }
   }
 
-  Future<void> _completeSession(Emitter<FocusState> emit) async {
-    await _tickerSubscription?.cancel();
-
-    Task? updatedTask = state.linkedTask;
-    try {
-      final session = FocusSession.create(
-        mode: state.mode,
-        durationSeconds: state.totalDurationSeconds,
-        taskId: state.linkedTask?.id,
-        distractionCount: state.distractionCount,
-        status: SessionStatus.completed,
-      );
-      await sessionRepository.saveSession(session);
-
-      if (state.mode == FocusMode.work &&
-          state.linkedTask != null &&
-          taskRepository != null) {
-        final minutes = (state.totalDurationSeconds / 60).round();
-        if (minutes > 0) {
-          await taskRepository!.addActualMinutes(state.linkedTask!.id, minutes);
-          updatedTask = state.linkedTask!.copyWith(
-            actualMinutes: state.linkedTask!.actualMinutes + minutes,
-          );
-        }
-      }
-
-      if (_settings.hapticEnabled) {
-        HapticFeedback.vibrate();
-      }
-      if (_settings.soundEnabled) {
-        SystemSound.play(SystemSoundType.alert);
-      }
-    } catch (_) {
-      // Continue even if logging fails
-    }
-
-    final count = await sessionRepository.getCompletedSessionsCountToday();
+  Future<void> _completeBreak(Emitter<FocusState> emit) async {
+    _stopTicker();
+    final session = FocusSession.create(
+      mode: state.mode,
+      durationSeconds: state.totalDurationSeconds,
+      completedAt: now(),
+      taskId: state.linkedTask?.id,
+      distractionCount: state.distractionCount,
+    );
+    emit(state.copyWith(status: FocusStatus.saving, clearTargetEndTime: true));
+    await _recordSession(session);
+    _signalIntervalEnded();
 
     if (_settings.autoStartNextSession) {
-      final nextMode = state.mode == FocusMode.work
-          ? FocusMode.shortBreak
-          : FocusMode.work;
-      final nextDuration = _durationForMode(nextMode, _settings);
-      final target = now().add(Duration(seconds: nextDuration));
-
-      emit(
-        state.copyWith(
-          status: FocusStatus.running,
-          mode: nextMode,
-          durationSeconds: nextDuration,
-          totalDurationSeconds: nextDuration,
-          targetEndTime: target,
-          distractionCount: 0,
-          sessionsCompletedToday: count,
-          linkedTask: updatedTask,
-        ),
-      );
-
-      _tickerSubscription = ticker
-          .tick(ticks: nextDuration)
-          .listen((duration) => add(FocusTicked(durationSeconds: duration)));
+      _moveToNextTimer(emit, state);
     } else {
       emit(
         state.copyWith(
           status: FocusStatus.completed,
           durationSeconds: 0,
-          clearTargetEndTime: true,
           distractionCount: 0,
-          sessionsCompletedToday: count,
-          linkedTask: updatedTask,
         ),
       );
     }
   }
 
-  void _onPaused(FocusPaused event, Emitter<FocusState> emit) {
-    if (state.isRunning) {
-      _tickerSubscription?.pause();
-      emit(
-        state.copyWith(status: FocusStatus.paused, clearTargetEndTime: true),
-      );
+  Future<bool> _recordSession(FocusSession session) async {
+    try {
+      if (session.mode == FocusMode.work) {
+        await sessionRepository.recordWorkSession(session);
+      } else {
+        await sessionRepository.saveSession(session);
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _signalIntervalEnded() {
+    if (_settings.hapticEnabled) unawaited(HapticFeedback.vibrate());
+    if (_settings.soundEnabled) {
+      unawaited(SystemSound.play(SystemSoundType.alert));
+    }
+  }
+
+  void _moveToNextTimer(Emitter<FocusState> emit, FocusState previous) {
+    final mode = previous.mode == FocusMode.work
+        ? FocusMode.shortBreak
+        : FocusMode.work;
+    final next = _readyState(previous, mode);
+    if (_settings.autoStartNextSession) {
+      _startCountdown(emit, next);
+    } else {
+      emit(next);
     }
   }
 
   void _onResumed(FocusResumed event, Emitter<FocusState> emit) {
-    if (state.isPaused) {
-      final target = now().add(Duration(seconds: state.durationSeconds));
-      _tickerSubscription?.resume();
-      emit(state.copyWith(status: FocusStatus.running, targetEndTime: target));
-    }
+    if (!state.isPaused) return;
+
+    final target = now().add(
+      Duration(
+        seconds: state.isOvertime
+            ? -state.overtimeSeconds!
+            : state.durationSeconds,
+      ),
+    );
+    emit(state.copyWith(status: FocusStatus.running, targetEndTime: target));
+    _startTicker(
+      countdownSeconds: state.isOvertime ? null : state.durationSeconds,
+    );
   }
 
   void _onReset(FocusReset event, Emitter<FocusState> emit) {
-    _tickerSubscription?.cancel();
-    final duration = _durationForMode(state.mode, _settings);
-    emit(
-      state.copyWith(
-        status: FocusStatus.initial,
-        durationSeconds: duration,
-        totalDurationSeconds: duration,
-        clearTargetEndTime: true,
-        distractionCount: 0,
-      ),
-    );
+    if (state.isOvertime || state.isSaving) return;
+    _stopTicker();
+    emit(_readyState(state, state.mode));
   }
 
   void _onModeChanged(FocusModeChanged event, Emitter<FocusState> emit) {
-    _tickerSubscription?.cancel();
-    final duration = _durationForMode(event.mode, _settings);
-    emit(
-      state.copyWith(
-        status: FocusStatus.initial,
-        mode: event.mode,
-        durationSeconds: duration,
-        totalDurationSeconds: duration,
-        clearTargetEndTime: true,
-        distractionCount: 0,
-      ),
-    );
+    if (state.isOvertime || state.isSaving) return;
+    _stopTicker();
+    emit(_readyState(state, event.mode));
   }
 
-  void _onTaskLinked(FocusTaskLinked event, Emitter<FocusState> emit) {
+  Future<void> _onTaskLinked(
+    FocusTaskLinked event,
+    Emitter<FocusState> emit,
+  ) async {
+    if (state.isOvertime || state.isSaving) return;
+    final deadline = state.targetEndTime;
+    if (state.isRunning &&
+        state.mode == FocusMode.work &&
+        deadline != null &&
+        !now().isBefore(deadline)) {
+      await _reconcileClock(emit);
+      return;
+    }
+
     emit(
       state.copyWith(
         linkedTask: event.task,
@@ -326,11 +427,34 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     );
   }
 
+  Future<Task?> _getLinkedTask(Task? previous) async {
+    if (previous == null || taskRepository == null) return previous;
+    try {
+      return await taskRepository!.getTaskById(previous.id) ?? previous;
+    } catch (_) {
+      return previous;
+    }
+  }
+
+  Future<int> _getCompletedCount() async {
+    try {
+      return await sessionRepository.getCompletedSessionsCountToday();
+    } catch (_) {
+      return state.sessionsCompletedToday;
+    }
+  }
+
+  Future<FocusState> _withUpdatedSummary(FocusState previous) async {
+    final count = await _getCompletedCount();
+    final task = await _getLinkedTask(previous.linkedTask);
+    return previous.copyWith(sessionsCompletedToday: count, linkedTask: task);
+  }
+
   Future<void> _onSessionsCountRefreshed(
     FocusSessionsCountRefreshed event,
     Emitter<FocusState> emit,
   ) async {
-    final count = await sessionRepository.getCompletedSessionsCountToday();
+    final count = await _getCompletedCount();
     emit(state.copyWith(sessionsCompletedToday: count));
   }
 
@@ -339,21 +463,13 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     Emitter<FocusState> emit,
   ) {
     _settings = event.settings;
-    if (state.isInitial) {
-      final duration = _durationForMode(state.mode, _settings);
-      emit(
-        state.copyWith(
-          durationSeconds: duration,
-          totalDurationSeconds: duration,
-        ),
-      );
-    }
+    if (state.isInitial) emit(_readyState(state, state.mode));
   }
 
   @override
   Future<void> close() {
-    _tickerSubscription?.cancel();
-    _settingsSubscription?.cancel();
+    _stopTicker();
+    unawaited(_settingsSubscription?.cancel());
     return super.close();
   }
 }

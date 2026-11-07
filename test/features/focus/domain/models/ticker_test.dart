@@ -9,5 +9,13 @@ void main() {
 
       expect(stream, emitsInOrder([2, 1, 0, emitsDone]));
     });
+
+    test('pulse keeps emitting until the subscriber stops it', () async {
+      const ticker = Ticker();
+      await expectLater(
+        ticker.pulse().take(2),
+        emitsInOrder([emits(anything), emits(anything), emitsDone]),
+      );
+    });
   });
 }
