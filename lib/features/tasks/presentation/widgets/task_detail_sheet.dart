@@ -159,10 +159,12 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    isEditing ? 'Edit Task' : 'New Task',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+                  Flexible(
+                    child: Text(
+                      isEditing ? 'Edit Task' : 'New Task',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   if (isEditing)
@@ -254,13 +256,15 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  OutlinedButton.icon(
-                    onPressed: _pickDueDate,
-                    icon: const Icon(Icons.calendar_today, size: 16),
-                    label: Text(
-                      _dueDate == null
-                          ? 'Set Due Date'
-                          : '${_dueDate!.year}-${_dueDate!.month.toString().padLeft(2, '0')}-${_dueDate!.day.toString().padLeft(2, '0')}',
+                  Flexible(
+                    child: OutlinedButton.icon(
+                      onPressed: _pickDueDate,
+                      icon: const Icon(Icons.calendar_today, size: 16),
+                      label: Text(
+                        _dueDate == null
+                            ? 'Set Due Date'
+                            : '${_dueDate!.year}-${_dueDate!.month.toString().padLeft(2, '0')}-${_dueDate!.day.toString().padLeft(2, '0')}',
+                      ),
                     ),
                   ),
                   if (_dueDate != null) ...[
@@ -295,10 +299,13 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 6,
+                        alignment: WrapAlignment.spaceBetween,
                         children: [
                           Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
                                 Icons.timelapse,
@@ -308,10 +315,12 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                                     : theme.colorScheme.primary,
                               ),
                               const SizedBox(width: 6),
-                              Text(
-                                'Focus Progress',
-                                style: theme.textTheme.labelLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
+                              Flexible(
+                                child: Text(
+                                  'Focus Progress',
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ],
@@ -405,10 +414,12 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Subtasks (${widget.task!.completedSubtasksCount}/${widget.task!.subtasks.length})',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                    Flexible(
+                      child: Text(
+                        'Subtasks (${widget.task!.completedSubtasksCount}/${widget.task!.subtasks.length})',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
@@ -482,14 +493,15 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
               ],
 
               // Action Buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 12,
+                runSpacing: 8,
                 children: [
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
                     child: const Text('Cancel'),
                   ),
-                  const SizedBox(width: 12),
                   FilledButton(
                     onPressed: _submit,
                     child: Text(isEditing ? 'Save Changes' : 'Create Task'),

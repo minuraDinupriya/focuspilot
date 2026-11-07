@@ -21,8 +21,11 @@ class TimerControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 16,
+      runSpacing: 12,
       children: [
         // Reset button
         IconButton.filledTonal(
@@ -30,10 +33,8 @@ class TimerControls extends StatelessWidget {
           icon: const Icon(Icons.refresh),
           tooltip: 'Reset timer',
         ),
-        const SizedBox(width: 24),
         // Primary action button
         _buildPrimaryButton(context),
-        const SizedBox(width: 24),
         // Skip cycle button
         IconButton.filledTonal(
           onPressed: onSkip,

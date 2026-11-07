@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:focuspilot/features/today/domain/models/daily_focus_metric.dart';
 
@@ -18,6 +20,7 @@ class WeeklyAnalyticsChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final textScale = MediaQuery.textScalerOf(context).scale(12) / 12;
 
     return Container(
       width: double.infinity,
@@ -33,8 +36,10 @@ class WeeklyAnalyticsChart extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header: Title and Streak Badge
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            alignment: WrapAlignment.spaceBetween,
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -76,11 +81,13 @@ class WeeklyAnalyticsChart extends StatelessWidget {
                       size: 18,
                     ),
                     const SizedBox(width: 4),
-                    Text(
-                      '$streakDays Day Streak',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.deepOrange,
+                    Flexible(
+                      child: Text(
+                        '$streakDays Day Streak',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.deepOrange,
+                        ),
                       ),
                     ),
                   ],
@@ -91,83 +98,96 @@ class WeeklyAnalyticsChart extends StatelessWidget {
           const SizedBox(height: 24),
 
           // 7-Day Bar Chart
-          SizedBox(
-            height: 120,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: metrics.map((metric) {
-                final ratio = maxMinutes > 0
-                    ? (metric.focusMinutes / maxMinutes).clamp(0.05, 1.0)
-                    : 0.05;
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: math.max(
+                    constraints.maxWidth,
+                    metrics.length * 48 * textScale,
+                  ),
+                  height: 120 * textScale,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: metrics.map((metric) {
+                      final ratio = maxMinutes > 0
+                          ? (metric.focusMinutes / maxMinutes).clamp(0.05, 1.0)
+                          : 0.05;
 
-                final isToday = metric.isToday;
-                final barColor = isToday
-                    ? theme.colorScheme.primary
-                    : (metric.focusMinutes > 0
-                          ? theme.colorScheme.primary.withValues(alpha: 0.45)
-                          : theme.colorScheme.surfaceContainerHighest);
+                      final isToday = metric.isToday;
+                      final barColor = isToday
+                          ? theme.colorScheme.primary
+                          : (metric.focusMinutes > 0
+                                ? theme.colorScheme.primary.withValues(
+                                    alpha: 0.45,
+                                  )
+                                : theme.colorScheme.surfaceContainerHighest);
 
-                return Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        // Minutes text on top of bar
-                        if (metric.focusMinutes > 0)
-                          Text(
-                            '${metric.focusMinutes}m',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              fontSize: 10,
-                              fontWeight: isToday
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                              color: isToday
-                                  ? theme.colorScheme.primary
-                                  : theme.colorScheme.onSurfaceVariant,
-                            ),
-                          )
-                        else
-                          const SizedBox(height: 14),
-                        const SizedBox(height: 4),
+                      return Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              // Minutes text on top of bar
+                              if (metric.focusMinutes > 0)
+                                Text(
+                                  '${metric.focusMinutes}m',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    fontSize: 10,
+                                    fontWeight: isToday
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: isToday
+                                        ? theme.colorScheme.primary
+                                        : theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                )
+                              else
+                                const SizedBox(height: 14),
+                              const SizedBox(height: 4),
 
-                        // The Bar
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.bottomCenter,
-                            child: FractionallySizedBox(
-                              heightFactor: ratio,
-                              child: Container(
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                  color: barColor,
-                                  borderRadius: BorderRadius.circular(6),
+                              // The Bar
+                              Expanded(
+                                child: Align(
+                                  alignment: Alignment.bottomCenter,
+                                  child: FractionallySizedBox(
+                                    heightFactor: ratio,
+                                    child: Container(
+                                      width: double.infinity,
+                                      decoration: BoxDecoration(
+                                        color: barColor,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
+                              const SizedBox(height: 8),
 
-                        // Day label below bar
-                        Text(
-                          metric.dayLabel,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            fontWeight: isToday
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            color: isToday
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.onSurfaceVariant,
+                              // Day label below bar
+                              Text(
+                                metric.dayLabel,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  fontWeight: isToday
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: isToday
+                                      ? theme.colorScheme.primary
+                                      : theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
+                      );
+                    }).toList(),
                   ),
-                );
-              }).toList(),
-            ),
+                ),
+              );
+            },
           ),
           if (onViewReview != null) ...[
             const SizedBox(height: 14),
@@ -190,11 +210,13 @@ class WeeklyAnalyticsChart extends StatelessWidget {
                       color: theme.colorScheme.primary,
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      'View Weekly Review Summary',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.bold,
+                    Flexible(
+                      child: Text(
+                        'View Weekly Review Summary',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 4),

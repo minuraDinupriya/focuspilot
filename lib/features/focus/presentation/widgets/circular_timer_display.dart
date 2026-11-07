@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:focuspilot/features/focus/domain/models/focus_mode.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
@@ -19,7 +21,7 @@ class CircularTimerDisplay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const size = 260.0;
+    final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
 
     Color progressColor;
     switch (mode) {
@@ -34,97 +36,118 @@ class CircularTimerDisplay extends StatelessWidget {
         break;
     }
 
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Background track
-          SizedBox(
-            width: size,
-            height: size,
-            child: CircularProgressIndicator(
-              value: 1.0,
-              strokeWidth: 12,
-              strokeCap: StrokeCap.round,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                theme.colorScheme.surfaceContainerHighest.withValues(
-                  alpha: 0.5,
-                ),
-              ),
-            ),
-          ),
-          // Active progress indicator
-          SizedBox(
-            width: size,
-            height: size,
-            child: CircularProgressIndicator(
-              value: progress,
-              strokeWidth: 12,
-              strokeCap: StrokeCap.round,
-              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-            ),
-          ),
-          // Center content
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = math.min(260 * textScale, constraints.maxWidth);
+        return SizedBox(
+          width: size,
+          height: size,
+          child: Stack(
+            alignment: Alignment.center,
             children: [
-              Text(
-                mode.displayName.toUpperCase(),
-                style: theme.textTheme.labelMedium?.copyWith(
-                  letterSpacing: 2.0,
-                  color: progressColor,
-                  fontWeight: FontWeight.bold,
+              // Background track
+              SizedBox(
+                width: size,
+                height: size,
+                child: CircularProgressIndicator(
+                  value: 1.0,
+                  strokeWidth: 12,
+                  strokeCap: StrokeCap.round,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    theme.colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.5,
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                timerString,
-                style: theme.textTheme.displayLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -1,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+              // Active progress indicator
+              SizedBox(
+                width: size,
+                height: size,
+                child: CircularProgressIndicator(
+                  value: progress,
+                  strokeWidth: 12,
+                  strokeCap: StrokeCap.round,
+                  valueColor: AlwaysStoppedAnimation<Color>(progressColor),
                 ),
               ),
-              if (linkedTask != null) ...[
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
-                  margin: const EdgeInsets.symmetric(horizontal: 24),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.task_alt,
-                        size: 14,
-                        color: theme.colorScheme.primary,
-                      ),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          linkedTask!.title,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            fontWeight: FontWeight.w500,
+              // Center content
+              Padding(
+                padding: const EdgeInsets.all(28),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: SizedBox(
+                    width: size - 56,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          mode.displayName.toUpperCase(),
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            letterSpacing: 2.0,
+                            color: progressColor,
+                            fontWeight: FontWeight.bold,
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 8),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            timerString,
+                            maxLines: 1,
+                            style: theme.textTheme.displayLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -1,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (linkedTask != null) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
+                            margin: const EdgeInsets.symmetric(horizontal: 24),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.task_alt,
+                                  size: 14,
+                                  color: theme.colorScheme.primary,
+                                ),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    linkedTask!.title,
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
-              ],
+              ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

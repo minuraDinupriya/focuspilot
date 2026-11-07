@@ -83,11 +83,13 @@ class _FocusScreenState extends State<FocusScreen> with WidgetsBindingObserver {
                         color: theme.colorScheme.onSecondaryContainer,
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        '${state.sessionsCompletedToday} sessions completed today',
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: theme.colorScheme.onSecondaryContainer,
-                          fontWeight: FontWeight.w600,
+                      Flexible(
+                        child: Text(
+                          '${state.sessionsCompletedToday} sessions completed today',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: theme.colorScheme.onSecondaryContainer,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ],
