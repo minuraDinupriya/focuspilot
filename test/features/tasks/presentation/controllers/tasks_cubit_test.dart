@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
+import 'package:focuspilot/features/tasks/domain/models/task_details.dart';
 import 'package:focuspilot/features/tasks/domain/models/task_priority.dart';
 import 'package:focuspilot/features/tasks/presentation/controllers/tasks_cubit.dart';
 import 'package:focuspilot/features/tasks/presentation/controllers/tasks_state.dart';
@@ -87,16 +88,17 @@ void main() {
       expect(cubit.state.filter, TasksFilter.completed);
     });
 
-    test('updateTask updates task in repository', () async {
+    test('updateTaskDetails saves editable fields in repository', () async {
       repository.emitTasks([testTask]);
       await pumpEventQueue();
 
-      final updated = testTask.copyWith(
+      const details = TaskDetails(
         title: 'Updated Title',
+        priority: TaskPriority.high,
         category: 'Study',
         estimatedMinutes: 45,
       );
-      await cubit.updateTask(updated);
+      expect(await cubit.updateTaskDetails(testTask.id, details), isTrue);
 
       expect(repository.tasks.first.title, 'Updated Title');
       expect(repository.tasks.first.category, 'Study');

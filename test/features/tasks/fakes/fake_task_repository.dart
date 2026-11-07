@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:focuspilot/features/tasks/domain/models/subtask.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
+import 'package:focuspilot/features/tasks/domain/models/task_details.dart';
 import 'package:focuspilot/features/tasks/domain/repositories/task_repository.dart';
 
 class FakeTaskRepository implements TaskRepository {
@@ -50,6 +51,29 @@ class FakeTaskRepository implements TaskRepository {
   }
 
   @override
+  Future<bool> updateTaskDetails(String id, TaskDetails details) async {
+    final index = _tasks.indexWhere((task) => task.id == id);
+    if (index < 0) return false;
+
+    _tasks[index] = _tasks[index].copyWith(
+      title: details.title,
+      priority: details.priority,
+      description: details.description,
+      clearDescription: details.description == null,
+      dueDate: details.dueDate,
+      clearDueDate: details.dueDate == null,
+      category: details.category,
+      clearCategory: details.category == null,
+      estimatedMinutes: details.estimatedMinutes,
+      clearEstimatedMinutes: details.estimatedMinutes == null,
+      recurrenceRule: details.recurrenceRule,
+      clearRecurrenceRule: details.recurrenceRule == null,
+    );
+    _controller.add(List.unmodifiable(_tasks));
+    return true;
+  }
+
+  @override
   Future<void> deleteTask(String id) async {
     _tasks.removeWhere((t) => t.id == id);
     _controller.add(List.unmodifiable(_tasks));
@@ -57,34 +81,34 @@ class FakeTaskRepository implements TaskRepository {
 
   @override
   Future<void> toggleTaskCompletion(String id) async {
-    final task = await getTaskById(id);
-    if (task != null) {
-      final updatedIsCompleted = !task.isCompleted;
-      final updated = task.copyWith(
-        isCompleted: updatedIsCompleted,
-        completedAt: updatedIsCompleted ? DateTime.now() : null,
-        clearCompletedAt: !updatedIsCompleted,
-      );
-      await saveTask(updated);
+    final index = _tasks.indexWhere((task) => task.id == id);
+    if (index < 0) return;
 
-      if (updatedIsCompleted && task.isRecurring) {
-        final nextInstance = task.createNextRecurringInstance();
-        if (nextInstance != null) {
-          await saveTask(nextInstance);
-        }
+    final task = _tasks[index];
+    final isCompleted = !task.isCompleted;
+    _tasks[index] = task.copyWith(
+      isCompleted: isCompleted,
+      completedAt: isCompleted ? DateTime.now() : null,
+      clearCompletedAt: !isCompleted,
+    );
+
+    if (isCompleted) {
+      final nextInstance = task.createNextRecurringInstance();
+      if (nextInstance != null) {
+        _tasks.add(nextInstance);
       }
     }
+    _controller.add(List.unmodifiable(_tasks));
   }
 
   @override
   Future<void> addActualMinutes(String taskId, int minutes) async {
-    final task = await getTaskById(taskId);
-    if (task != null) {
-      final updated = task.copyWith(
-        actualMinutes: task.actualMinutes + minutes,
-      );
-      await saveTask(updated);
-    }
+    final index = _tasks.indexWhere((task) => task.id == taskId);
+    if (index < 0) return;
+
+    final task = _tasks[index];
+    _tasks[index] = task.copyWith(actualMinutes: task.actualMinutes + minutes);
+    _controller.add(List.unmodifiable(_tasks));
   }
 
   @override

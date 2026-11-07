@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
+import 'package:focuspilot/features/tasks/domain/models/task_details.dart';
 import 'package:focuspilot/features/tasks/domain/models/task_priority.dart';
 import 'package:focuspilot/features/tasks/domain/repositories/task_repository.dart';
 import 'package:focuspilot/features/tasks/presentation/controllers/tasks_state.dart';
@@ -39,7 +40,7 @@ class TasksCubit extends Cubit<TasksState> {
     );
   }
 
-  Future<void> addTask({
+  Future<bool> addTask({
     required String title,
     String? description,
     TaskPriority priority = TaskPriority.medium,
@@ -61,26 +62,42 @@ class TasksCubit extends Cubit<TasksState> {
         recurrenceRule: recurrenceRule,
       );
       await _taskRepository.saveTask(task);
+      return true;
     } catch (e) {
-      emit(
-        state.copyWith(
-          status: TasksStatus.failure,
-          errorMessage: 'Failed to add task: ${e.toString()}',
-        ),
-      );
+      if (!isClosed) {
+        emit(
+          state.copyWith(
+            status: TasksStatus.failure,
+            errorMessage: 'Failed to add task: $e',
+          ),
+        );
+      }
+      return false;
     }
   }
 
-  Future<void> updateTask(Task task) async {
+  Future<bool> updateTaskDetails(String id, TaskDetails details) async {
     try {
-      await _taskRepository.saveTask(task);
+      final saved = await _taskRepository.updateTaskDetails(id, details);
+      if (!saved && !isClosed) {
+        emit(
+          state.copyWith(
+            status: TasksStatus.failure,
+            errorMessage: 'This task is no longer available.',
+          ),
+        );
+      }
+      return saved;
     } catch (e) {
-      emit(
-        state.copyWith(
-          status: TasksStatus.failure,
-          errorMessage: 'Failed to update task: ${e.toString()}',
-        ),
-      );
+      if (!isClosed) {
+        emit(
+          state.copyWith(
+            status: TasksStatus.failure,
+            errorMessage: 'Failed to update task: $e',
+          ),
+        );
+      }
+      return false;
     }
   }
 

@@ -1,8 +1,12 @@
+import 'dart:collection';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
+import 'package:focuspilot/features/tasks/domain/models/task_details.dart';
 import 'package:focuspilot/features/tasks/domain/models/task_priority.dart';
 import 'package:focuspilot/features/tasks/presentation/controllers/tasks_cubit.dart';
+import 'package:focuspilot/features/tasks/presentation/controllers/tasks_state.dart';
 
 class TaskDetailSheet extends StatefulWidget {
   const TaskDetailSheet({super.key, this.task});
@@ -39,6 +43,8 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
   String? _category;
   int? _estimatedMinutes;
   String? _recurrenceRule;
+  bool _isSaving = false;
+  bool _saveFailed = false;
 
   static const _categories = [
     'Study',
@@ -78,42 +84,48 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
     super.dispose();
   }
 
-  void _submit() {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+  Future<void> _submit() async {
+    if (_isSaving || !(_formKey.currentState?.validate() ?? false)) return;
 
     final cubit = context.read<TasksCubit>();
-    if (widget.task == null) {
-      cubit.addTask(
-        title: _titleController.text.trim(),
-        description: _descController.text.trim().isEmpty
-            ? null
-            : _descController.text.trim(),
-        priority: _priority,
-        dueDate: _dueDate,
-        category: _category,
-        estimatedMinutes: _estimatedMinutes,
-        recurrenceRule: _recurrenceRule == 'none' ? null : _recurrenceRule,
-      );
-    } else {
-      final updated = widget.task!.copyWith(
-        title: _titleController.text.trim(),
-        description: _descController.text.trim().isEmpty
-            ? null
-            : _descController.text.trim(),
-        priority: _priority,
-        dueDate: _dueDate,
-        clearDueDate: _dueDate == null,
-        category: _category,
-        clearCategory: _category == null,
-        estimatedMinutes: _estimatedMinutes,
-        clearEstimatedMinutes: _estimatedMinutes == null,
-        recurrenceRule: _recurrenceRule == 'none' ? null : _recurrenceRule,
-        clearRecurrenceRule:
-            _recurrenceRule == null || _recurrenceRule == 'none',
-      );
-      cubit.updateTask(updated);
+    final taskId = widget.task?.id;
+    final description = _descController.text.trim();
+    final details = TaskDetails(
+      title: _titleController.text.trim(),
+      description: description.isEmpty ? null : description,
+      priority: _priority,
+      dueDate: _dueDate,
+      category: _category,
+      estimatedMinutes: _estimatedMinutes,
+      recurrenceRule: _recurrenceRule == 'none' ? null : _recurrenceRule,
+    );
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _isSaving = true;
+      _saveFailed = false;
+    });
+
+    final saved = taskId == null
+        ? await cubit.addTask(
+            title: details.title,
+            description: details.description,
+            priority: details.priority,
+            dueDate: details.dueDate,
+            category: details.category,
+            estimatedMinutes: details.estimatedMinutes,
+            recurrenceRule: details.recurrenceRule,
+          )
+        : await cubit.updateTaskDetails(taskId, details);
+
+    if (!mounted) return;
+    if (saved && ModalRoute.of(context)?.isCurrent == true) {
+      Navigator.of(context).pop();
+      return;
     }
-    Navigator.of(context).pop();
+    setState(() {
+      _isSaving = false;
+      _saveFailed = !saved;
+    });
   }
 
   Future<void> _pickDueDate() async {
@@ -124,7 +136,7 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
       firstDate: now.subtract(const Duration(days: 365)),
       lastDate: now.add(const Duration(days: 365 * 5)),
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() => _dueDate = picked);
     }
   }
@@ -139,9 +151,21 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isEditing = widget.task != null;
+    final openingTask = widget.task;
+    final isEditing = openingTask != null;
+    final task = openingTask == null
+        ? null
+        : context.select((TasksCubit cubit) {
+            final state = cubit.state;
+            final current = state.tasks
+                .where((task) => task.id == openingTask.id)
+                .firstOrNull;
+            return current ??
+                (state.status == TasksStatus.loading ? openingTask : null);
+          });
+    final isUnavailable = isEditing && task == null;
 
-    return Padding(
+    final form = Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
         top: 16,
@@ -167,7 +191,7 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                       ),
                     ),
                   ),
-                  if (isEditing)
+                  if (task != null)
                     IconButton(
                       icon: Icon(
                         Icons.delete_outline,
@@ -175,7 +199,7 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                       ),
                       tooltip: 'Delete task',
                       onPressed: () {
-                        context.read<TasksCubit>().deleteTask(widget.task!.id);
+                        context.read<TasksCubit>().deleteTask(task.id);
                         Navigator.of(context).pop();
                       },
                     ),
@@ -280,9 +304,9 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
               const SizedBox(height: 16),
 
               // Focus Time Tracking (Actual vs. Estimated)
-              if (widget.task != null &&
-                  (widget.task!.actualMinutes > 0 ||
-                      widget.task!.estimatedMinutes != null)) ...[
+              if (task != null &&
+                  (task.actualMinutes > 0 ||
+                      task.estimatedMinutes != null)) ...[
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -291,7 +315,7 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                     ),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: widget.task!.isOverEstimated
+                      color: task.isOverEstimated
                           ? theme.colorScheme.error.withValues(alpha: 0.5)
                           : theme.colorScheme.outlineVariant,
                     ),
@@ -310,7 +334,7 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                               Icon(
                                 Icons.timelapse,
                                 size: 18,
-                                color: widget.task!.isOverEstimated
+                                color: task.isOverEstimated
                                     ? theme.colorScheme.error
                                     : theme.colorScheme.primary,
                               ),
@@ -326,29 +350,29 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                             ],
                           ),
                           Text(
-                            widget.task!.estimatedMinutes != null
-                                ? '${widget.task!.actualMinutes}m / ${widget.task!.estimatedMinutes}m'
-                                : '${widget.task!.actualMinutes}m logged',
+                            task.estimatedMinutes != null
+                                ? '${task.actualMinutes}m / ${task.estimatedMinutes}m'
+                                : '${task.actualMinutes}m logged',
                             style: theme.textTheme.labelMedium?.copyWith(
                               fontWeight: FontWeight.w600,
-                              color: widget.task!.isOverEstimated
+                              color: task.isOverEstimated
                                   ? theme.colorScheme.error
                                   : null,
                             ),
                           ),
                         ],
                       ),
-                      if (widget.task!.timeProgress != null) ...[
+                      if (task.timeProgress != null) ...[
                         const SizedBox(height: 8),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
-                            value: widget.task!.timeProgress,
+                            value: task.timeProgress,
                             minHeight: 6,
                             backgroundColor:
                                 theme.colorScheme.surfaceContainerHighest,
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              widget.task!.isOverEstimated
+                              task.isOverEstimated
                                   ? theme.colorScheme.error
                                   : theme.colorScheme.primary,
                             ),
@@ -356,11 +380,11 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          widget.task!.isOverEstimated
-                              ? 'Exceeded estimate by ${widget.task!.actualMinutes - widget.task!.estimatedMinutes!} min'
-                              : '${widget.task!.remainingEstimatedMinutes} min remaining of estimate',
+                          task.isOverEstimated
+                              ? 'Exceeded estimate by ${task.actualMinutes - task.estimatedMinutes!} min'
+                              : '${task.remainingEstimatedMinutes} min remaining of estimate',
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: widget.task!.isOverEstimated
+                            color: task.isOverEstimated
                                 ? theme.colorScheme.error
                                 : theme.colorScheme.onSurfaceVariant,
                           ),
@@ -408,7 +432,7 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
               const SizedBox(height: 20),
 
               // Subtasks Checklist Section (Available when editing existing task)
-              if (isEditing) ...[
+              if (task != null) ...[
                 const Divider(),
                 const SizedBox(height: 8),
                 Row(
@@ -416,7 +440,7 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                   children: [
                     Flexible(
                       child: Text(
-                        'Subtasks (${widget.task!.completedSubtasksCount}/${widget.task!.subtasks.length})',
+                        'Subtasks (${task.completedSubtasksCount}/${task.subtasks.length})',
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -424,18 +448,19 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                     ),
                   ],
                 ),
-                if (widget.task!.subtasks.isNotEmpty) ...[
+                if (task.subtasks.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   LinearProgressIndicator(
-                    value: widget.task!.subtasksProgress,
+                    value: task.subtasksProgress,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ],
                 const SizedBox(height: 8),
 
                 // Subtask list items
-                ...widget.task!.subtasks.map((s) {
+                ...task.subtasks.map((s) {
                   return ListTile(
+                    key: ValueKey(s.id),
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                     leading: Checkbox(
@@ -492,6 +517,21 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                 const SizedBox(height: 20),
               ],
 
+              if (isUnavailable || _saveFailed) ...[
+                Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    isUnavailable
+                        ? 'This task is no longer available.'
+                        : 'Could not save this task. Try again.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.error,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+
               // Action Buttons
               Wrap(
                 alignment: WrapAlignment.end,
@@ -499,12 +539,18 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                 runSpacing: 8,
                 children: [
                   TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: _isSaving
+                        ? null
+                        : () => Navigator.of(context).pop(),
                     child: const Text('Cancel'),
                   ),
                   FilledButton(
-                    onPressed: _submit,
-                    child: Text(isEditing ? 'Save Changes' : 'Create Task'),
+                    onPressed: _isSaving || isUnavailable ? null : _submit,
+                    child: Text(
+                      _isSaving
+                          ? 'Saving...'
+                          : (isEditing ? 'Save Changes' : 'Create Task'),
+                    ),
                   ),
                 ],
               ),
@@ -513,6 +559,10 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
           ),
         ),
       ),
+    );
+    return ExcludeFocus(
+      excluding: _isSaving,
+      child: AbsorbPointer(absorbing: _isSaving, child: form),
     );
   }
 }
