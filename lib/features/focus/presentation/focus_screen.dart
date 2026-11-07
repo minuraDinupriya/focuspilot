@@ -10,32 +10,8 @@ import 'package:focuspilot/features/focus/presentation/widgets/focus_mode_select
 import 'package:focuspilot/features/focus/presentation/widgets/focus_task_selector.dart';
 import 'package:focuspilot/features/focus/presentation/widgets/timer_controls.dart';
 
-class FocusScreen extends StatefulWidget {
+class FocusScreen extends StatelessWidget {
   const FocusScreen({super.key});
-
-  @override
-  State<FocusScreen> createState() => _FocusScreenState();
-}
-
-class _FocusScreenState extends State<FocusScreen> with WidgetsBindingObserver {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      context.read<FocusBloc>().add(const FocusAppForegrounded());
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,22 +19,29 @@ class _FocusScreenState extends State<FocusScreen> with WidgetsBindingObserver {
 
     return Scaffold(
       body: BlocConsumer<FocusBloc, FocusState>(
+        listenWhen: (previous, current) =>
+            (!previous.isCompleted && current.isCompleted) ||
+            (previous.isOvertime &&
+                !current.isOvertime &&
+                current.mode == FocusMode.shortBreak),
         listener: (context, state) {
-          if (state.status == FocusStatus.completed) {
-            final message = state.mode == FocusMode.work
-                ? '🎉 Focus session completed! Great work!'
-                : '☕ Break completed! Ready to focus?';
+          final message = state.isCompleted
+              ? state.mode == FocusMode.work
+                    ? '🎉 Focus session completed! Great work!'
+                    : '☕ Break completed! Ready to focus?'
+              : 'Focus time saved.';
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(message),
-                behavior: SnackBarBehavior.floating,
-                duration: const Duration(seconds: 3),
-              ),
-            );
-          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 3),
+            ),
+          );
         },
         builder: (context, state) {
+          final bloc = context.read<FocusBloc>();
+          final canChangeTask = !state.isOvertime && !state.isSaving;
           return SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
             child: Column(
@@ -100,9 +83,9 @@ class _FocusScreenState extends State<FocusScreen> with WidgetsBindingObserver {
                 // Mode Selector
                 FocusModeSelector(
                   selectedMode: state.mode,
-                  enabled: !state.isRunning,
+                  enabled: canChangeTask && !state.isRunning,
                   onModeSelected: (mode) {
-                    context.read<FocusBloc>().add(FocusModeChanged(mode: mode));
+                    bloc.add(FocusModeChanged(mode: mode));
                   },
                 ),
                 const SizedBox(height: 36),
@@ -113,37 +96,48 @@ class _FocusScreenState extends State<FocusScreen> with WidgetsBindingObserver {
                   progress: state.progress,
                   mode: state.mode,
                   linkedTask: state.linkedTask,
+                  isOvertime: state.isOvertime,
                 ),
+                if (state.isOvertime && !state.isSaving) ...[
+                  const SizedBox(height: 16),
+                  _FlowTimeMessage(state: state),
+                ],
                 const SizedBox(height: 24),
 
                 // Link task chip
                 FocusTaskSelector(
                   linkedTask: state.linkedTask,
+                  enabled: canChangeTask,
                   onTaskSelected: (task) {
-                    context.read<FocusBloc>().add(FocusTaskLinked(task: task));
+                    bloc.add(FocusTaskLinked(task: task));
                   },
                 ),
                 const SizedBox(height: 36),
 
                 // Controls
                 TimerControls(
-                  status: state.status,
+                  state: state,
                   onStart: () {
-                    context.read<FocusBloc>().add(
-                      FocusStarted(durationSeconds: state.durationSeconds),
+                    bloc.add(
+                      FocusStarted(durationSeconds: state.totalDurationSeconds),
                     );
                   },
                   onPause: () {
-                    context.read<FocusBloc>().add(const FocusPaused());
+                    bloc.add(const FocusPaused());
                   },
                   onResume: () {
-                    context.read<FocusBloc>().add(const FocusResumed());
+                    bloc.add(const FocusResumed());
                   },
                   onReset: () {
-                    context.read<FocusBloc>().add(const FocusReset());
+                    bloc.add(const FocusReset());
                   },
                   onSkip: () {
-                    context.read<FocusBloc>().add(const FocusSkipped());
+                    bloc.add(const FocusSkipped());
+                  },
+                  onFinishOvertime: (includeOvertime) {
+                    bloc.add(
+                      FocusOvertimeFinished(includeOvertime: includeOvertime),
+                    );
                   },
                 ),
                 if (state.isRunning || state.isPaused) ...[
@@ -165,9 +159,7 @@ class _FocusScreenState extends State<FocusScreen> with WidgetsBindingObserver {
                     tooltip: 'Tap to log an interruption during this session',
                     onPressed: () {
                       HapticFeedback.selectionClick();
-                      context.read<FocusBloc>().add(
-                        const FocusDistractionRecorded(),
-                      );
+                      bloc.add(const FocusDistractionRecorded());
                     },
                   ),
                 ],
@@ -175,6 +167,41 @@ class _FocusScreenState extends State<FocusScreen> with WidgetsBindingObserver {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _FlowTimeMessage extends StatelessWidget {
+  const _FlowTimeMessage({required this.state});
+
+  final FocusState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final String message;
+    if (state.hasSaveError) {
+      message = 'Couldn’t save your focus time. Try saving again.';
+    } else if (state.isPaused) {
+      message = 'Flow time is paused. Resume when you’re ready.';
+    } else {
+      message = 'Target reached. Extra time counts toward your focus when you finish.';
+    }
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 420),
+      child: Semantics(
+        liveRegion: true,
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: state.hasSaveError
+                ? theme.colorScheme.error
+                : theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
       ),
     );
   }

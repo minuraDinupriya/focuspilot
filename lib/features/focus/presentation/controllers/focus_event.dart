@@ -82,3 +82,12 @@ class FocusDistractionRecorded extends FocusEvent {
 class FocusSkipped extends FocusEvent {
   const FocusSkipped();
 }
+
+class FocusOvertimeFinished extends FocusEvent {
+  const FocusOvertimeFinished({this.includeOvertime = true});
+
+  final bool includeOvertime;
+
+  @override
+  List<Object?> get props => [includeOvertime];
+}

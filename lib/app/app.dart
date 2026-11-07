@@ -53,7 +53,10 @@ class _FocusPilotAppState extends State<FocusPilotApp> {
       _taskRepository = widget.taskRepository ?? TaskRepositoryImpl(_database);
       _focusSessionRepository =
           widget.focusSessionRepository ??
-          FocusSessionRepositoryImpl(_database);
+          FocusSessionRepositoryImpl(
+            _database,
+            taskRepository: _taskRepository,
+          );
       _settingsRepository =
           widget.settingsRepository ?? SqliteSettingsRepository(_database);
     }

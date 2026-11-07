@@ -4,6 +4,18 @@ import 'package:focuspilot/features/focus/data/repositories/focus_session_reposi
 import 'package:focuspilot/features/focus/domain/models/focus_mode.dart';
 import 'package:focuspilot/features/focus/domain/models/focus_session.dart';
 import 'package:focuspilot/features/tasks/data/datasources/database/app_database.dart';
+import 'package:focuspilot/features/tasks/data/repositories/task_repository_impl.dart';
+import 'package:focuspilot/features/tasks/domain/models/task.dart';
+
+class _FailingTaskRepository extends TaskRepositoryImpl {
+  _FailingTaskRepository(super.database);
+
+  @override
+  Future<void> addActualMinutes(String taskId, int minutes) async {
+    await super.addActualMinutes(taskId, minutes);
+    throw StateError('Task credit failed');
+  }
+}
 
 void main() {
   late AppDatabase database;
@@ -69,6 +81,76 @@ void main() {
       final minutes = await repository.getTodayFocusMinutes();
       expect(minutes, 25);
     });
+
+    test(
+      'extends one work session and credits only additional minutes',
+      () async {
+        final tasks = TaskRepositoryImpl(database);
+        final task = Task.create(title: 'Draft the report', actualMinutes: 7);
+        await tasks.saveTask(task);
+        final completedAt = DateTime(now.year, now.month, now.day, 12);
+        final checkpoint = FocusSession(
+          id: 'extended-work',
+          mode: FocusMode.work,
+          durationSeconds: 1500,
+          completedAt: completedAt,
+          taskId: task.id,
+        );
+        final extended = FocusSession(
+          id: checkpoint.id,
+          mode: checkpoint.mode,
+          durationSeconds: 1530,
+          completedAt: completedAt.add(const Duration(seconds: 30)),
+          taskId: task.id,
+          distractionCount: 2,
+        );
+
+        await repository.recordWorkSession(checkpoint);
+        expect((await tasks.getTaskById(task.id))?.actualMinutes, 32);
+        expect(await repository.getCompletedSessionsCountToday(), 1);
+
+        await Future.wait([
+          repository.recordWorkSession(extended),
+          repository.recordWorkSession(extended),
+        ]);
+        await repository.recordWorkSession(checkpoint);
+
+        expect(await repository.getSessions(), [extended]);
+        expect(await repository.getCompletedSessionsCountToday(), 1);
+        expect(await repository.getTodayFocusMinutes(), 26);
+        expect(await repository.getTaskFocusMinutes(task.id), 26);
+        expect((await tasks.getTaskById(task.id))?.actualMinutes, 33);
+      },
+    );
+
+    test(
+      'failed task credit rolls back the work session and can be retried',
+      () async {
+        final tasks = TaskRepositoryImpl(database);
+        final task = Task.create(title: 'Review the report', actualMinutes: 7);
+        await tasks.saveTask(task);
+        final session = FocusSession.create(
+          mode: FocusMode.work,
+          durationSeconds: 1500,
+          taskId: task.id,
+        );
+        final failingRepository = FocusSessionRepositoryImpl(
+          database,
+          taskRepository: _FailingTaskRepository(database),
+        );
+
+        await expectLater(
+          failingRepository.recordWorkSession(session),
+          throwsStateError,
+        );
+        expect(await repository.getSessions(), isEmpty);
+        expect((await tasks.getTaskById(task.id))?.actualMinutes, 7);
+
+        await repository.recordWorkSession(session);
+        expect(await repository.getSessions(), hasLength(1));
+        expect((await tasks.getTaskById(task.id))?.actualMinutes, 32);
+      },
+    );
 
     test('persists distraction count and session status correctly', () async {
       final sessionWithDistractions = FocusSession(

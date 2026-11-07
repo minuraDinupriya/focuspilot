@@ -11,12 +11,14 @@ class CircularTimerDisplay extends StatelessWidget {
     required this.progress,
     required this.mode,
     this.linkedTask,
+    this.isOvertime = false,
   });
 
   final String timerString;
   final double progress;
   final FocusMode mode;
   final Task? linkedTask;
+  final bool isOvertime;
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +28,9 @@ class CircularTimerDisplay extends StatelessWidget {
     Color progressColor;
     switch (mode) {
       case FocusMode.work:
-        progressColor = theme.colorScheme.primary;
+        progressColor = isOvertime
+            ? theme.colorScheme.secondary
+            : theme.colorScheme.primary;
         break;
       case FocusMode.shortBreak:
         progressColor = theme.colorScheme.tertiary;
@@ -82,7 +86,9 @@ class CircularTimerDisplay extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          mode.displayName.toUpperCase(),
+                          isOvertime
+                              ? 'FLOW TIME'
+                              : mode.displayName.toUpperCase(),
                           style: theme.textTheme.labelMedium?.copyWith(
                             letterSpacing: 2.0,
                             color: progressColor,

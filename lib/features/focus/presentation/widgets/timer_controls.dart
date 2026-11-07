@@ -1,26 +1,64 @@
 import 'package:flutter/material.dart';
+import 'package:focuspilot/features/focus/domain/models/focus_mode.dart';
 import 'package:focuspilot/features/focus/presentation/controllers/focus_state.dart';
 
 class TimerControls extends StatelessWidget {
   const TimerControls({
     super.key,
-    required this.status,
+    required this.state,
     required this.onStart,
     required this.onPause,
     required this.onResume,
     required this.onReset,
     required this.onSkip,
+    required this.onFinishOvertime,
   });
 
-  final FocusStatus status;
+  final FocusState state;
   final VoidCallback onStart;
   final VoidCallback onPause;
   final VoidCallback onResume;
   final VoidCallback onReset;
   final VoidCallback onSkip;
+  final ValueChanged<bool> onFinishOvertime;
 
   @override
   Widget build(BuildContext context) {
+    if (state.isSaving) {
+      return _buildPrimaryButton();
+    }
+
+    if (state.isOvertime) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              FilledButton.icon(
+                onPressed: () => onFinishOvertime(true),
+                icon: const Icon(Icons.check),
+                label: const Text('Finish focus'),
+              ),
+              OutlinedButton.icon(
+                onPressed: state.isPaused ? onResume : onPause,
+                icon: Icon(state.isPaused ? Icons.play_arrow : Icons.pause),
+                label: Text(state.isPaused ? 'Resume' : 'Pause'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          TextButton(
+            onPressed: () => onFinishOvertime(false),
+            child: const Text('Log planned time only'),
+          ),
+        ],
+      );
+    }
+
     return Wrap(
       alignment: WrapAlignment.center,
       crossAxisAlignment: WrapCrossAlignment.center,
@@ -29,12 +67,12 @@ class TimerControls extends StatelessWidget {
       children: [
         // Reset button
         IconButton.filledTonal(
-          onPressed: status == FocusStatus.initial ? null : onReset,
+          onPressed: state.isInitial ? null : onReset,
           icon: const Icon(Icons.refresh),
           tooltip: 'Reset timer',
         ),
         // Primary action button
-        _buildPrimaryButton(context),
+        _buildPrimaryButton(),
         // Skip cycle button
         IconButton.filledTonal(
           onPressed: onSkip,
@@ -45,13 +83,16 @@ class TimerControls extends StatelessWidget {
     );
   }
 
-  Widget _buildPrimaryButton(BuildContext context) {
-    switch (status) {
+  Widget _buildPrimaryButton() {
+    switch (state.status) {
       case FocusStatus.initial:
         return FilledButton.icon(
           onPressed: onStart,
           icon: const Icon(Icons.play_arrow, size: 28),
-          label: const Text('Start Focus', style: TextStyle(fontSize: 16)),
+          label: Text(
+            state.mode == FocusMode.work ? 'Start Focus' : 'Start Break',
+            style: const TextStyle(fontSize: 16),
+          ),
           style: FilledButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
           ),
@@ -81,6 +122,15 @@ class TimerControls extends StatelessWidget {
           label: const Text('Start New', style: TextStyle(fontSize: 16)),
           style: FilledButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+          ),
+        );
+      case FocusStatus.saving:
+        return Semantics(
+          liveRegion: true,
+          child: FilledButton.icon(
+            onPressed: null,
+            icon: const Icon(Icons.hourglass_top),
+            label: const Text('Saving focus…'),
           ),
         );
     }

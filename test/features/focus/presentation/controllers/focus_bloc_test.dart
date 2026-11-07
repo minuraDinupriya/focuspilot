@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focuspilot/features/focus/domain/models/focus_mode.dart';
+import 'package:focuspilot/features/focus/domain/models/focus_session.dart';
 import 'package:focuspilot/features/focus/domain/models/ticker.dart';
 import 'package:focuspilot/features/focus/presentation/controllers/focus_bloc.dart';
 import 'package:focuspilot/features/focus/presentation/controllers/focus_event.dart';
@@ -14,13 +15,39 @@ import '../../../tasks/fakes/fake_task_repository.dart';
 import '../../fakes/fake_focus_session_repository.dart';
 
 class FakeTicker extends Ticker {
-  const FakeTicker({this.stream});
+  const FakeTicker({this.stream = const Stream.empty(), this.overtime});
 
-  final Stream<int>? stream;
+  final Stream<int> stream;
+  final Stream<void>? overtime;
+
+  @override
+  Stream<int> tick({required int ticks}) => stream;
+
+  @override
+  Stream<void> pulse() => overtime ?? const Stream.empty();
+}
+
+class _CountdownSpy extends FakeTicker {
+  final startedCountdowns = <int>[];
 
   @override
   Stream<int> tick({required int ticks}) {
-    return stream ?? Stream.fromIterable([ticks - 1, ticks - 2, 0]);
+    startedCountdowns.add(ticks);
+    return super.tick(ticks: ticks);
+  }
+}
+
+class _ControlledWorkRepository extends FakeFocusSessionRepository {
+  Completer<void>? nextWrite;
+  int workWrites = 0;
+
+  @override
+  Future<void> recordWorkSession(FocusSession session) async {
+    workWrites++;
+    final gate = nextWrite;
+    nextWrite = null;
+    if (gate != null) await gate.future;
+    await super.recordWorkSession(session);
   }
 }
 
@@ -58,7 +85,7 @@ void main() {
     });
 
     test('FocusStarted and FocusPaused transitions state', () async {
-      final controller = StreamController<int>();
+      final controller = StreamController<int>.broadcast();
       final controlledBloc = FocusBloc(
         ticker: FakeTicker(stream: controller.stream),
         sessionRepository: repository,
@@ -94,13 +121,29 @@ void main() {
       expect(bloc.state.durationSeconds, 25 * 60);
     });
 
-    test('FocusTicked reaching 0 saves session and marks completed', () async {
-      bloc.add(const FocusTicked(durationSeconds: 0));
+    test('break expiry still completes without entering overtime', () async {
+      var currentTime = DateTime(2026, 11, 4, 10);
+      final testBloc = FocusBloc(
+        ticker: const FakeTicker(),
+        sessionRepository: repository,
+        now: () => currentTime,
+      );
+      addTearDown(testBloc.close);
+
+      testBloc.add(const FocusModeChanged(mode: FocusMode.shortBreak));
+      testBloc.add(const FocusStarted(durationSeconds: 300));
       await pumpEventQueue();
 
-      expect(bloc.state.isCompleted, isTrue);
-      final sessions = await repository.getSessions();
-      expect(sessions.length, 1);
+      currentTime = currentTime.add(const Duration(minutes: 5));
+      testBloc.add(const FocusTicked(durationSeconds: 0));
+      await pumpEventQueue();
+
+      expect(testBloc.state.isCompleted, isTrue);
+      expect(testBloc.state.isOvertime, isFalse);
+      final session = (await repository.getSessions()).single;
+      expect(session.mode, FocusMode.shortBreak);
+      expect(session.status, SessionStatus.completed);
+      expect(session.durationSeconds, 300);
     });
 
     test('FocusBloc dynamically adapts to custom settings durations', () async {
@@ -206,32 +249,81 @@ void main() {
     );
 
     test(
-      'FocusAppForegrounded completes session if timer expired in background',
+      'foreground recovery and pulses count from the work deadline',
       () async {
-        var currentTime = DateTime(2026, 11, 4, 10, 0, 0);
+        var currentTime = DateTime(2026, 11, 4, 10);
+        final overtime = StreamController<void>.broadcast();
         final testBloc = FocusBloc(
-          ticker: const FakeTicker(stream: Stream.empty()),
+          ticker: FakeTicker(overtime: overtime.stream),
           sessionRepository: repository,
           now: () => currentTime,
         );
+        addTearDown(overtime.close);
+        addTearDown(testBloc.close);
 
         testBloc.add(const FocusStarted(durationSeconds: 300));
         await pumpEventQueue();
 
-        // Simulate 350 seconds passing in background (exceeds 300s)
         currentTime = currentTime.add(const Duration(seconds: 350));
         testBloc.add(const FocusAppForegrounded());
         await pumpEventQueue();
 
-        expect(testBloc.state.isCompleted, isTrue);
-        expect(testBloc.state.durationSeconds, 0);
-        final sessions = await repository.getSessions();
-        expect(sessions.length, 1);
-        expect(sessions.first.durationSeconds, 300);
+        expect(testBloc.state.isRunning, isTrue);
+        expect(testBloc.state.isOvertime, isTrue);
+        expect(testBloc.state.mode, FocusMode.work);
+        expect(testBloc.state.overtimeSeconds, 50);
+        expect(testBloc.state.timerString, '+00:50');
+        expect(testBloc.state.progress, 1.0);
+        final plannedSession = (await repository.getSessions()).single;
+        expect(plannedSession.durationSeconds, 300);
+        expect(plannedSession.status, SessionStatus.completed);
 
-        await testBloc.close();
+        currentTime = currentTime.add(const Duration(seconds: 20));
+        overtime.add(null);
+        await pumpEventQueue();
+
+        expect(testBloc.state.overtimeSeconds, 70);
+        expect(testBloc.state.timerString, '+01:10');
       },
     );
+
+    test('paused overtime excludes time away before resuming', () async {
+      var currentTime = DateTime(2026, 11, 4, 10);
+      final testBloc = FocusBloc(
+        ticker: const FakeTicker(),
+        sessionRepository: repository,
+        now: () => currentTime,
+      );
+      addTearDown(testBloc.close);
+
+      testBloc.add(const FocusStarted(durationSeconds: 300));
+      await pumpEventQueue();
+      currentTime = currentTime.add(const Duration(seconds: 350));
+      testBloc.add(const FocusAppForegrounded());
+      await pumpEventQueue();
+
+      currentTime = currentTime.add(const Duration(seconds: 10));
+      testBloc.add(const FocusPaused());
+      await pumpEventQueue();
+      expect(testBloc.state.isPaused, isTrue);
+      expect(testBloc.state.overtimeSeconds, 60);
+
+      currentTime = currentTime.add(const Duration(minutes: 2));
+      testBloc.add(const FocusAppForegrounded());
+      await pumpEventQueue();
+      expect(testBloc.state.overtimeSeconds, 60);
+
+      testBloc.add(const FocusResumed());
+      await pumpEventQueue();
+      currentTime = currentTime.add(const Duration(seconds: 15));
+      testBloc.add(const FocusAppForegrounded());
+      await pumpEventQueue();
+      expect(testBloc.state.overtimeSeconds, 75);
+
+      testBloc.add(const FocusOvertimeFinished());
+      await pumpEventQueue();
+      expect((await repository.getSessions()).single.durationSeconds, 375);
+    });
 
     test('FocusDistractionRecorded increments distractionCount during active session', () async {
       final controlledBloc = FocusBloc(
@@ -319,44 +411,258 @@ void main() {
       },
     );
 
-    test('Session completion updates actualMinutes on linkedTask in taskRepository and state', () async {
-      final taskRepo = FakeTaskRepository();
-      final testTask = Task.create(
-        title: 'Math Homework',
-        estimatedMinutes: 60,
+    test(
+      'custom work duration enters overtime before an automatic break',
+      () async {
+        var currentTime = DateTime(2026, 11, 4, 10);
+        final settings = InMemorySettingsRepository(
+          const UserSettings(
+            workDurationMinutes: 40,
+            shortBreakDurationMinutes: 7,
+            autoStartNextSession: true,
+          ),
+        );
+        final autoBloc = FocusBloc(
+          ticker: const FakeTicker(),
+          sessionRepository: repository,
+          settingsRepository: settings,
+          now: () => currentTime,
+        );
+        addTearDown(settings.dispose);
+        addTearDown(autoBloc.close);
+        await pumpEventQueue();
+
+        autoBloc.add(
+          FocusStarted(durationSeconds: autoBloc.state.durationSeconds),
+        );
+        await pumpEventQueue();
+        final deadline = currentTime.add(const Duration(minutes: 40));
+
+        currentTime = deadline.subtract(const Duration(milliseconds: 1));
+        autoBloc.add(const FocusTicked(durationSeconds: 0));
+        await pumpEventQueue();
+        expect(autoBloc.state.isOvertime, isFalse);
+        expect(await repository.getSessions(), isEmpty);
+
+        currentTime = deadline;
+        autoBloc.add(const FocusAppForegrounded());
+        await pumpEventQueue();
+        expect(autoBloc.state.isRunning, isTrue);
+        expect(autoBloc.state.mode, FocusMode.work);
+        expect(autoBloc.state.overtimeSeconds, 0);
+        expect(autoBloc.state.timerString, '+00:00');
+        expect(
+          (await repository.getSessions()).single.durationSeconds,
+          40 * 60,
+        );
+
+        autoBloc.add(const FocusOvertimeFinished());
+        await pumpEventQueue();
+        expect(autoBloc.state.mode, FocusMode.shortBreak);
+        expect(autoBloc.state.isRunning, isTrue);
+        expect(autoBloc.state.isOvertime, isFalse);
+        expect(autoBloc.state.durationSeconds, 7 * 60);
+      },
+    );
+
+    test(
+      'overtime extends the same work session and credits the linked task',
+      () async {
+        final taskRepo = FakeTaskRepository();
+        final sessionRepo = FakeFocusSessionRepository(
+          taskRepository: taskRepo,
+        );
+        final testTask = Task.create(
+          title: 'Math Homework',
+          estimatedMinutes: 60,
+          actualMinutes: 4,
+        );
+        final otherTask = Task.create(title: 'Chemistry');
+        await taskRepo.saveTask(testTask);
+        await taskRepo.saveTask(otherTask);
+
+        final today = DateTime.now();
+        var currentTime = DateTime(today.year, today.month, today.day, 12);
+        final taskBloc = FocusBloc(
+          ticker: const FakeTicker(),
+          sessionRepository: sessionRepo,
+          taskRepository: taskRepo,
+          now: () => currentTime,
+        );
+        addTearDown(taskRepo.dispose);
+        addTearDown(sessionRepo.dispose);
+        addTearDown(taskBloc.close);
+
+        taskBloc.add(FocusTaskLinked(task: testTask));
+        await pumpEventQueue();
+        taskBloc.add(const FocusStarted(durationSeconds: 25 * 60));
+        await pumpEventQueue();
+        currentTime = currentTime.add(const Duration(minutes: 25));
+        // Quick Focus can arrive at the deadline before the next clock tick.
+        taskBloc.add(FocusTaskLinked(task: otherTask));
+        await pumpEventQueue();
+
+        expect(taskBloc.state.isOvertime, isTrue);
+        final plannedSession = (await sessionRepo.getSessions()).single;
+        expect(plannedSession.durationSeconds, 25 * 60);
+        expect((await taskRepo.getTaskById(testTask.id))?.actualMinutes, 29);
+        expect(await sessionRepo.getCompletedSessionsCountToday(), 1);
+
+        // Quick Focus on another task must preserve the active session's link.
+        taskBloc.add(FocusTaskLinked(task: otherTask));
+        await pumpEventQueue();
+        currentTime = currentTime.add(const Duration(minutes: 7, seconds: 30));
+        taskBloc.add(const FocusOvertimeFinished());
+        await pumpEventQueue();
+
+        final savedSession = (await sessionRepo.getSessions()).single;
+        expect(savedSession.id, plannedSession.id);
+        expect(savedSession.durationSeconds, 32 * 60 + 30);
+        expect(savedSession.taskId, testTask.id);
+        expect(await sessionRepo.getCompletedSessionsCountToday(), 1);
+        expect(await sessionRepo.getTodayFocusMinutes(), 33);
+        final updatedTask = await taskRepo.getTaskById(testTask.id);
+        expect(updatedTask?.actualMinutes, 37);
+        expect((await taskRepo.getTaskById(otherTask.id))?.actualMinutes, 0);
+        expect(taskBloc.state.linkedTask?.actualMinutes, 37);
+        expect(taskBloc.state.mode, FocusMode.shortBreak);
+        expect(taskBloc.state.isInitial, isTrue);
+      },
+    );
+
+    test(
+      'logging planned time only leaves the work checkpoint unchanged',
+      () async {
+        var currentTime = DateTime(2026, 11, 4, 10);
+        final testBloc = FocusBloc(
+          ticker: const FakeTicker(),
+          sessionRepository: repository,
+          now: () => currentTime,
+        );
+        addTearDown(testBloc.close);
+
+        testBloc.add(const FocusStarted(durationSeconds: 300));
+        await pumpEventQueue();
+        currentTime = currentTime.add(const Duration(minutes: 12));
+        testBloc.add(const FocusAppForegrounded());
+        await pumpEventQueue();
+        expect(testBloc.state.overtimeSeconds, 7 * 60);
+        final plannedSession = (await repository.getSessions()).single;
+
+        testBloc.add(const FocusOvertimeFinished(includeOvertime: false));
+        await pumpEventQueue();
+
+        final savedSession = (await repository.getSessions()).single;
+        expect(savedSession.id, plannedSession.id);
+        expect(savedSession.durationSeconds, 300);
+        expect(testBloc.state.isOvertime, isFalse);
+        expect(testBloc.state.isInitial, isTrue);
+        expect(testBloc.state.mode, FocusMode.shortBreak);
+      },
+    );
+
+    test('duplicate timer and finish events do not add writes, and a failed finish can be retried', () async {
+      var currentTime = DateTime(2026, 11, 4, 10);
+      final sessionRepo = _ControlledWorkRepository();
+      final testBloc = FocusBloc(
+        ticker: const FakeTicker(),
+        sessionRepository: sessionRepo,
+        now: () => currentTime,
       );
-      await taskRepo.saveTask(testTask);
+      addTearDown(sessionRepo.dispose);
+      addTearDown(testBloc.close);
 
-      final taskBloc = FocusBloc(
-        ticker: const FakeTicker(stream: Stream.empty()),
-        sessionRepository: repository,
-        taskRepository: taskRepo,
-      );
+      testBloc.add(const FocusStarted(durationSeconds: 300));
       await pumpEventQueue();
-
-      taskBloc.add(FocusTaskLinked(task: testTask));
+      currentTime = currentTime.add(const Duration(minutes: 7));
+      testBloc.add(const FocusTicked(durationSeconds: 0));
+      testBloc.add(const FocusAppForegrounded());
       await pumpEventQueue();
+      expect(testBloc.state.overtimeSeconds, 120);
+      expect(sessionRepo.workWrites, 1);
+      final plannedSession = (await sessionRepo.getSessions()).single;
 
-      // Start 25-minute session
-      taskBloc.add(const FocusStarted(durationSeconds: 25 * 60));
+      final gate = Completer<void>();
+      addTearDown(() {
+        if (!gate.isCompleted) gate.complete();
+      });
+      sessionRepo.nextWrite = gate;
+      testBloc.add(const FocusOvertimeFinished());
       await pumpEventQueue();
-
-      // Tick to 0 to complete session
-      taskBloc.add(const FocusTicked(durationSeconds: 0));
+      expect(testBloc.state.isSaving, isTrue);
+      testBloc.add(const FocusOvertimeFinished(includeOvertime: false));
+      testBloc.add(const FocusAppForegrounded());
       await pumpEventQueue();
+      expect(sessionRepo.workWrites, 2);
 
-      // Task repository should have 25 minutes logged
-      final updatedTask = await taskRepo.getTaskById(testTask.id);
-      expect(updatedTask, isNotNull);
-      expect(updatedTask!.actualMinutes, 25);
-      expect(taskBloc.state.linkedTask?.actualMinutes, 25);
+      currentTime = currentTime.add(const Duration(minutes: 3));
+      gate.completeError(StateError('Write failed'));
+      await pumpEventQueue();
+      expect(testBloc.state.hasSaveError, isTrue);
+      expect(testBloc.state.isPaused, isTrue);
+      expect(testBloc.state.overtimeSeconds, 120);
+      expect((await sessionRepo.getSessions()).single, plannedSession);
 
-      await taskBloc.close();
-      taskRepo.dispose();
+      testBloc.add(const FocusOvertimeFinished());
+      await pumpEventQueue();
+      expect(sessionRepo.workWrites, 3);
+      expect(testBloc.state.hasSaveError, isFalse);
+      expect(testBloc.state.mode, FocusMode.shortBreak);
+      final savedSession = (await sessionRepo.getSessions()).single;
+      expect(savedSession.id, plannedSession.id);
+      expect(savedSession.durationSeconds, 420);
     });
+
+    test(
+      'finishing a pending save after close does not start a break ticker',
+      () async {
+        var currentTime = DateTime(2026, 11, 4, 10);
+        final ticker = _CountdownSpy();
+        final sessionRepo = _ControlledWorkRepository();
+        final settings = InMemorySettingsRepository(
+          const UserSettings(autoStartNextSession: true),
+        );
+        final testBloc = FocusBloc(
+          ticker: ticker,
+          sessionRepository: sessionRepo,
+          settingsRepository: settings,
+          now: () => currentTime,
+        );
+        final gate = Completer<void>();
+        addTearDown(settings.dispose);
+        addTearDown(sessionRepo.dispose);
+        addTearDown(() async {
+          if (!gate.isCompleted) gate.complete();
+          if (!testBloc.isClosed) await testBloc.close();
+        });
+        await pumpEventQueue();
+
+        testBloc.add(const FocusStarted(durationSeconds: 300));
+        await pumpEventQueue();
+        currentTime = currentTime.add(const Duration(minutes: 7));
+        testBloc.add(const FocusAppForegrounded());
+        await pumpEventQueue();
+
+        sessionRepo.nextWrite = gate;
+        testBloc.add(const FocusOvertimeFinished());
+        await pumpEventQueue();
+        expect(testBloc.state.isSaving, isTrue);
+        expect(sessionRepo.workWrites, 2);
+
+        final closing = testBloc.close();
+        await pumpEventQueue();
+        gate.complete();
+        await closing;
+        await pumpEventQueue();
+
+        expect(ticker.startedCountdowns, [300]);
+        expect((await sessionRepo.getSessions()).single.durationSeconds, 420);
+      },
+    );
 
     test('Skipping session with elapsed focus time attributes minutes to linked task', () async {
       final taskRepo = FakeTaskRepository();
+      final sessionRepo = FakeFocusSessionRepository(taskRepository: taskRepo);
       final testTask = Task.create(
         title: 'Writing Paper',
         estimatedMinutes: 45,
@@ -366,7 +672,7 @@ void main() {
       var fakeNow = DateTime(2026, 11, 5, 10, 0);
       final taskBloc = FocusBloc(
         ticker: const FakeTicker(stream: Stream.empty()),
-        sessionRepository: repository,
+        sessionRepository: sessionRepo,
         taskRepository: taskRepo,
         now: () => fakeNow,
       );
@@ -394,6 +700,7 @@ void main() {
       expect(taskBloc.state.linkedTask?.actualMinutes, 10);
 
       await taskBloc.close();
+      sessionRepo.dispose();
       taskRepo.dispose();
     });
   });

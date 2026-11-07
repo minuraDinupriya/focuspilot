@@ -282,7 +282,7 @@ class SettingsSheet extends StatelessWidget {
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Auto-start Next Session'),
                 subtitle: const Text(
-                  'Automatically begin breaks and work cycles',
+                  'Start breaks when you finish focus and restart focus when a break ends.',
                 ),
                 value: settings.autoStartNextSession,
                 onChanged: (val) {

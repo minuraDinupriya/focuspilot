@@ -3,11 +3,16 @@ import 'package:focuspilot/features/focus/domain/models/focus_mode.dart';
 import 'package:focuspilot/features/focus/domain/models/focus_session.dart';
 import 'package:focuspilot/features/focus/domain/repositories/focus_session_repository.dart';
 import 'package:focuspilot/features/tasks/data/datasources/database/app_database.dart';
+import 'package:focuspilot/features/tasks/data/repositories/task_repository_impl.dart';
+import 'package:focuspilot/features/tasks/domain/repositories/task_repository.dart';
 
 class FocusSessionRepositoryImpl implements FocusSessionRepository {
-  FocusSessionRepositoryImpl(this._database);
+  /// [taskRepository] must use the same database to share write transactions.
+  FocusSessionRepositoryImpl(this._database, {TaskRepository? taskRepository})
+    : _taskRepository = taskRepository ?? TaskRepositoryImpl(_database);
 
   final AppDatabase _database;
+  final TaskRepository _taskRepository;
 
   @override
   Future<void> saveSession(FocusSession session) async {
@@ -24,6 +29,37 @@ class FocusSessionRepositoryImpl implements FocusSessionRepository {
             status: Value(session.status.name),
           ),
         );
+  }
+
+  @override
+  Future<void> recordWorkSession(FocusSession session) async {
+    if (session.mode != FocusMode.work) {
+      throw ArgumentError.value(session.mode, 'session.mode', 'must be work');
+    }
+
+    await _database.transaction(() async {
+      final query = _database.select(_database.focusSessionEntries)
+        ..where((table) => table.id.equals(session.id));
+      final previous = await query.getSingleOrNull();
+      if (previous != null) {
+        if (previous.mode != FocusMode.work.name ||
+            previous.taskId != session.taskId) {
+          throw StateError(
+            'The recorded work session has a different mode or task.',
+          );
+        }
+        if (previous.durationSeconds > session.durationSeconds) return;
+      }
+
+      await saveSession(session);
+      final taskId = session.taskId;
+      final previousMinutes = ((previous?.durationSeconds ?? 0) / 60).round();
+      final addedMinutes =
+          (session.durationSeconds / 60).round() - previousMinutes;
+      if (taskId != null && addedMinutes > 0) {
+        await _taskRepository.addActualMinutes(taskId, addedMinutes);
+      }
+    });
   }
 
   @override

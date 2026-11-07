@@ -30,9 +30,17 @@ class FakeFocusSessionRepository implements FocusSessionRepository {
 
   @override
   Future<void> saveSession(FocusSession session) async {
-    _sessions.add(session);
+    final index = _sessions.indexWhere((entry) => entry.id == session.id);
+    if (index < 0) {
+      _sessions.add(session);
+    } else {
+      _sessions[index] = session;
+    }
     _controller.add(List.unmodifiable(_sessions));
   }
+
+  @override
+  Future<void> recordWorkSession(FocusSession session) => saveSession(session);
 
   @override
   Future<int> getCompletedSessionsCountToday() async {
