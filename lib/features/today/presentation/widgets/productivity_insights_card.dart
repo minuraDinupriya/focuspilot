@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:focuspilot/app/widgets/adaptive_segmented_button.dart';
 import 'package:focuspilot/features/tasks/domain/models/task_priority.dart';
 import 'package:focuspilot/features/today/domain/models/productivity_insight.dart';
 
@@ -69,10 +70,12 @@ class _ProductivityInsightsCardState extends State<ProductivityInsightsCard> {
               children: [
                 Icon(Icons.insights, size: 20, color: colorScheme.primary),
                 const SizedBox(width: 8),
-                Text(
-                  'Productivity Insights',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                Flexible(
+                  child: Text(
+                    'Productivity Insights',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -80,7 +83,7 @@ class _ProductivityInsightsCardState extends State<ProductivityInsightsCard> {
             const SizedBox(height: 12),
 
             // Segmented Button
-            SegmentedButton<InsightTab>(
+            AdaptiveSegmentedButton<InsightTab>(
               segments: const [
                 ButtonSegment(
                   value: InsightTab.category,
@@ -176,10 +179,12 @@ class _ProductivityInsightsCardState extends State<ProductivityInsightsCard> {
                     ),
                   ),
                 ),
-                Text(
-                  '${item.minutes}m ($pct%)',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                Flexible(
+                  child: Text(
+                    '${item.minutes}m ($pct%)',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ],
@@ -206,17 +211,22 @@ class _ProductivityInsightsCardState extends State<ProductivityInsightsCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                spacing: 12,
+                runSpacing: 6,
+                alignment: WrapAlignment.spaceBetween,
                 children: [
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.flag, size: 16, color: color),
                       const SizedBox(width: 6),
-                      Text(
-                        '${item.priority.displayName} Priority',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                      Flexible(
+                        child: Text(
+                          '${item.priority.displayName} Priority',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],

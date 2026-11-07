@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:focuspilot/app/widgets/adaptive_segmented_button.dart';
 import 'package:focuspilot/features/settings/domain/models/app_theme_mode.dart';
 import 'package:focuspilot/features/settings/presentation/controllers/settings_cubit.dart';
 
@@ -132,10 +133,12 @@ class SettingsSheet extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Focus & Timer Settings',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+                  Flexible(
+                    child: Text(
+                      'Focus & Timer Settings',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   IconButton(
@@ -147,8 +150,11 @@ class SettingsSheet extends StatelessWidget {
               const SizedBox(height: 16),
 
               // Timer Presets Section
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(
                     'Timer Presets',
@@ -328,8 +334,8 @@ class SettingsSheet extends StatelessWidget {
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
-                child: SegmentedButton<AppThemeMode>(
-                  key: const Key('theme_mode_segmented_button'),
+                child: AdaptiveSegmentedButton<AppThemeMode>(
+                  buttonKey: const Key('theme_mode_segmented_button'),
                   segments: AppThemeMode.values.map((mode) {
                     return ButtonSegment<AppThemeMode>(
                       value: mode,
@@ -386,6 +392,7 @@ class _DurationSelector extends StatelessWidget {
       builder: (dialogCtx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: Text('Custom $title'),
+          scrollable: true,
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -409,28 +416,30 @@ class _DurationSelector extends StatelessWidget {
                     },
                   ),
                   const SizedBox(width: 12),
-                  SizedBox(
-                    width: 90,
-                    child: TextField(
-                      controller: controller,
-                      keyboardType: TextInputType.number,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(ctx).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.bold),
-                      decoration: InputDecoration(
-                        suffixText: unit,
-                        border: const OutlineInputBorder(),
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 8,
-                          horizontal: 8,
+                  Flexible(
+                    child: SizedBox(
+                      width: 90,
+                      child: TextField(
+                        controller: controller,
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(ctx).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                        decoration: InputDecoration(
+                          suffixText: unit,
+                          border: const OutlineInputBorder(),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 8,
+                          ),
                         ),
+                        onChanged: (text) {
+                          final val = int.tryParse(text);
+                          if (val != null) {
+                            setDialogState(() => current = val);
+                          }
+                        },
                       ),
-                      onChanged: (text) {
-                        final val = int.tryParse(text);
-                        if (val != null) {
-                          setDialogState(() => current = val);
-                        }
-                      },
                     ),
                   ),
                   const SizedBox(width: 12),

@@ -81,7 +81,10 @@ class GoalStreaksCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Text(
                               currentStreakDays > 0
@@ -91,7 +94,6 @@ class GoalStreaksCard extends StatelessWidget {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 6,
@@ -129,10 +131,13 @@ class GoalStreaksCard extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Daily Goal Progress
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              alignment: WrapAlignment.spaceBetween,
               children: [
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       isDailyGoalAchieved ? Icons.check_circle : Icons.today,
@@ -142,10 +147,12 @@ class GoalStreaksCard extends StatelessWidget {
                           : colorScheme.primary,
                     ),
                     const SizedBox(width: 6),
-                    Text(
-                      'Daily Goal',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+                    Flexible(
+                      child: Text(
+                        'Daily Goal',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
@@ -185,10 +192,13 @@ class GoalStreaksCard extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Weekly Goal Progress
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              alignment: WrapAlignment.spaceBetween,
               children: [
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       isWeeklyGoalAchieved
@@ -200,10 +210,12 @@ class GoalStreaksCard extends StatelessWidget {
                           : colorScheme.primary,
                     ),
                     const SizedBox(width: 6),
-                    Text(
-                      'Weekly Goal',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+                    Flexible(
+                      child: Text(
+                        'Weekly Goal',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],

@@ -59,6 +59,7 @@ class _FocusHeatmapCardState extends State<FocusHeatmapCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final cellSize = 14 * (MediaQuery.textScalerOf(context).scale(10) / 10);
 
     final totalHours = (widget.totalMinutes / 60.0).toStringAsFixed(1);
 
@@ -83,10 +84,13 @@ class _FocusHeatmapCardState extends State<FocusHeatmapCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              alignment: WrapAlignment.spaceBetween,
               children: [
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       Icons.grid_view_rounded,
@@ -94,10 +98,12 @@ class _FocusHeatmapCardState extends State<FocusHeatmapCard> {
                       color: colorScheme.primary,
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      'Focus Activity (90 Days)',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                    Flexible(
+                      child: Text(
+                        'Focus Activity (90 Days)',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
@@ -138,7 +144,7 @@ class _FocusHeatmapCardState extends State<FocusHeatmapCard> {
                         final showLabel =
                             rowIndex == 0 || rowIndex == 2 || rowIndex == 4;
                         return Container(
-                          height: 14,
+                          height: cellSize,
                           margin: const EdgeInsets.symmetric(vertical: 2),
                           alignment: Alignment.centerLeft,
                           child: Text(
@@ -168,8 +174,8 @@ class _FocusHeatmapCardState extends State<FocusHeatmapCard> {
                                 });
                               },
                               child: Container(
-                                width: 14,
-                                height: 14,
+                                width: cellSize,
+                                height: cellSize,
                                 margin: const EdgeInsets.symmetric(vertical: 2),
                                 decoration: BoxDecoration(
                                   color: _colorForLevel(day.level, colorScheme),
@@ -216,10 +222,12 @@ class _FocusHeatmapCardState extends State<FocusHeatmapCard> {
                       color: colorScheme.primary,
                     ),
                     const SizedBox(width: 6),
-                    Text(
-                      '${_formatDate(_selectedDay!.date)}: ${_selectedDay!.focusMinutes}m focused',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
+                    Flexible(
+                      child: Text(
+                        '${_formatDate(_selectedDay!.date)}: ${_selectedDay!.focusMinutes}m focused',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],

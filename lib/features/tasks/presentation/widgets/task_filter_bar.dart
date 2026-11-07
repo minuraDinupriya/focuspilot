@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:focuspilot/app/widgets/adaptive_segmented_button.dart';
 import 'package:focuspilot/features/tasks/domain/models/task_priority.dart';
 import 'package:focuspilot/features/tasks/presentation/controllers/tasks_state.dart';
 
@@ -46,7 +47,7 @@ class TaskFilterBar extends StatelessWidget {
         // Primary Status SegmentedButton
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: SegmentedButton<TasksFilter>(
+          child: AdaptiveSegmentedButton<TasksFilter>(
             segments: [
               ButtonSegment<TasksFilter>(
                 value: TasksFilter.all,
