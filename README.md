@@ -2,14 +2,15 @@
 
 [![Flutter CI](https://github.com/minuraDinupriya/focuspilot/actions/workflows/flutter_ci.yml/badge.svg)](https://github.com/minuraDinupriya/focuspilot/actions/workflows/flutter_ci.yml)
 [![Flutter CD](https://github.com/minuraDinupriya/focuspilot/actions/workflows/flutter_cd.yml/badge.svg)](https://github.com/minuraDinupriya/focuspilot/actions/workflows/flutter_cd.yml)
-[![Latest Release](https://img.shields.io/badge/Release-v1.0.0-2E7D32?logo=github)](https://github.com/minuraDinupriya/focuspilot/releases)
+[![Latest Release](https://img.shields.io/github/v/release/minuraDinupriya/focuspilot?logo=github)](https://github.com/minuraDinupriya/focuspilot/releases/latest)
 [![Flutter](https://img.shields.io/badge/Flutter-3.47.9-02569B?logo=flutter)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.13.7-0175C2?logo=dart)](https://dart.dev)
 [![Architecture](https://img.shields.io/badge/Architecture-Feature--First%20Clean%20Architecture-blueviolet)]()
 [![Persistence](https://img.shields.io/badge/Storage-Drift%20SQLite%20(Offline--First)-4479A1?logo=sqlite)](https://drift.simonbinder.eu/)
-[![Tests](https://img.shields.io/badge/Tests-54%20Passing%20(100%25)-success?logo=checkmarx)]()
 
-FocusPilot is a production-grade, **offline-first productivity and focus management mobile application** built with Flutter and Dart. Designed with Material 3 design principles and enterprise software engineering patterns, it empowers knowledge workers, students, and professionals to organize workloads, track high-priority tasks, enter deep focus sessions, and visualize productivity trends — completely offline with zero tracking or account mandates.
+FocusPilot is an **offline-first productivity app** built with Flutter, Dart, and Material 3. It combines task planning, Pomodoro and Flow Time sessions, and productivity insights. Tasks, settings, and focus history are stored locally, and the app requires no account.
+
+Try the Android demo from the [latest GitHub release](https://github.com/minuraDinupriya/focuspilot/releases/latest).
 
 ---
 
@@ -23,6 +24,7 @@ FocusPilot is a production-grade, **offline-first productivity and focus managem
 
 * **⏱️ Pomodoro Focus Engine**
   * **Countdown & State Machine:** Robust timer state machine (`Work`, `Short Break`, `Long Break`) with pause, resume, and skip controls.
+  * **Flow Time:** Continue focusing when the timer ends, then save the full session or log only the planned block.
   * **Task Linking:** Bind any pending task directly to an active timer session for targeted deep work.
   * **Audio & Haptic Feedback:** High-fidelity tactile haptics and completion chime on session wrap-up.
   * **Session Persistence:** Completed sessions are saved directly into SQLite for historical analytics.
@@ -122,8 +124,7 @@ flutter test --coverage
 
 ### Prerequisites
 
-* [Flutter SDK](https://docs.flutter.dev/get-started/install) (v3.24.0+ or compatible)
-* [Dart SDK](https://dart.dev/get-dart) (v3.5.0+ or compatible)
+* [Flutter SDK](https://docs.flutter.dev/get-started/install) (3.47.9, with Dart 3.13.7)
 * Android Studio / Android SDK with USB Debugging enabled (for running on physical hardware)
 
 ### Installation & Run
@@ -159,7 +160,7 @@ FocusPilot follows modern Agile / Scrum engineering practices:
 * **Automated CI Quality Gate (`.github/workflows/flutter_ci.yml`):**
   * Enforces `dart format` compliance.
   * Enforces zero-warning `flutter analyze`.
-  * Runs all 54 tests and generates `lcov.info` code coverage artifact.
+  * Runs the test suite and uploads `lcov.info` as a coverage artifact.
 * **Automated CD Release Pipeline (`.github/workflows/flutter_cd.yml`):**
-  * Pushing a semver tag (e.g. `git tag v1.0.0 && git push origin v1.0.0`) automatically compiles a release APK on Ubuntu runners and publishes it as a downloadable GitHub Release asset.
+  * Pushing a version tag that matches `pubspec.yaml` builds the Android demo and publishes the APK and SHA-256 checksum on GitHub Releases.
 * **PR Templates:** Structured checklist requiring Jira ticket links, manual testing verification, and test coverage validation prior to merging.
