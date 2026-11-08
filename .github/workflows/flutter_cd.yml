@@ -26,20 +26,35 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version: '3.47.9'
           cache: true
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build Android Release APK
-        run: flutter build apk --release
+      - name: Verify release version
+        run: |
+          version=$(sed -n 's/^version: \([^+]*\)+[0-9][0-9]*$/\1/p' pubspec.yaml)
+          test -n "$version" && test "v$version" = "$GITHUB_REF_NAME"
+
+      - name: Build Android demo APK
+        run: |
+          flutter build apk --release
+          cp build/app/outputs/flutter-apk/app-release.apk focuspilot-android-demo.apk
+          sha256sum focuspilot-android-demo.apk > focuspilot-android-demo.apk.sha256
 
       - name: Create GitHub Release & Upload APK
         uses: softprops/action-gh-release@v2
         with:
-          files: build/app/outputs/flutter-apk/app-release.apk
-          name: Release ${{ github.ref_name }}
+          files: |
+            focuspilot-android-demo.apk
+            focuspilot-android-demo.apk.sha256
+          fail_on_unmatched_files: true
+          name: FocusPilot ${{ github.ref_name }}
+          body: |
+            Download `focuspilot-android-demo.apk` to try FocusPilot on Android. The accompanying SHA-256 file verifies the download.
+
+            This demo uses an Android debug signing key. Installing over a previous build requires a matching signing key. Uninstalling an existing build deletes its local data.
           draft: false
           prerelease: false
           generate_release_notes: true
