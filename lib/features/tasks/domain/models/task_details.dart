@@ -6,6 +6,7 @@ class TaskDetails {
     required this.priority,
     this.description,
     this.dueDate,
+    this.scheduledStart,
     this.category,
     this.estimatedMinutes,
     this.recurrenceRule,
@@ -15,6 +16,7 @@ class TaskDetails {
   final TaskPriority priority;
   final String? description;
   final DateTime? dueDate;
+  final DateTime? scheduledStart;
   final String? category;
   final int? estimatedMinutes;
   final String? recurrenceRule;

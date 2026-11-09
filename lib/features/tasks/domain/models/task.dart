@@ -12,6 +12,7 @@ class Task extends Equatable {
     this.isCompleted = false,
     this.priority = TaskPriority.medium,
     this.dueDate,
+    this.scheduledStart,
     required this.createdAt,
     this.completedAt,
     this.category,
@@ -28,6 +29,7 @@ class Task extends Equatable {
   final bool isCompleted;
   final TaskPriority priority;
   final DateTime? dueDate;
+  final DateTime? scheduledStart;
   final DateTime createdAt;
   final DateTime? completedAt;
   final String? category;
@@ -106,6 +108,7 @@ class Task extends Equatable {
     String? description,
     TaskPriority priority = TaskPriority.medium,
     DateTime? dueDate,
+    DateTime? scheduledStart,
     String? category,
     List<String> tags = const [],
     int? estimatedMinutes,
@@ -122,6 +125,7 @@ class Task extends Equatable {
       isCompleted: false,
       priority: priority,
       dueDate: dueDate,
+      scheduledStart: scheduledStart,
       createdAt: DateTime.now(),
       completedAt: null,
       category: category?.trim().isEmpty ?? true ? null : category?.trim(),
@@ -142,6 +146,7 @@ class Task extends Equatable {
     bool? isCompleted,
     TaskPriority? priority,
     DateTime? dueDate,
+    DateTime? scheduledStart,
     DateTime? createdAt,
     DateTime? completedAt,
     String? category,
@@ -152,6 +157,7 @@ class Task extends Equatable {
     List<Subtask>? subtasks,
     bool clearDescription = false,
     bool clearDueDate = false,
+    bool clearScheduledStart = false,
     bool clearCompletedAt = false,
     bool clearCategory = false,
     bool clearEstimatedMinutes = false,
@@ -164,6 +170,9 @@ class Task extends Equatable {
       isCompleted: isCompleted ?? this.isCompleted,
       priority: priority ?? this.priority,
       dueDate: clearDueDate ? null : (dueDate ?? this.dueDate),
+      scheduledStart: clearScheduledStart
+          ? null
+          : scheduledStart ?? this.scheduledStart,
       createdAt: createdAt ?? this.createdAt,
       completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),
       category: clearCategory ? null : (category ?? this.category),
@@ -187,6 +196,7 @@ class Task extends Equatable {
     isCompleted,
     priority,
     dueDate,
+    scheduledStart,
     createdAt,
     completedAt,
     category,

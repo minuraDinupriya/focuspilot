@@ -80,6 +80,18 @@ class $TaskEntriesTable extends TaskEntries
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _scheduledStartMeta = const VerificationMeta(
+    'scheduledStart',
+  );
+  @override
+  late final GeneratedColumn<DateTime> scheduledStart =
+      GeneratedColumn<DateTime>(
+        'scheduled_start',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -165,6 +177,7 @@ class $TaskEntriesTable extends TaskEntries
     isCompleted,
     priority,
     dueDate,
+    scheduledStart,
     createdAt,
     completedAt,
     category,
@@ -226,6 +239,15 @@ class $TaskEntriesTable extends TaskEntries
       context.handle(
         _dueDateMeta,
         dueDate.isAcceptableOrUnknown(data['due_date']!, _dueDateMeta),
+      );
+    }
+    if (data.containsKey('scheduled_start')) {
+      context.handle(
+        _scheduledStartMeta,
+        scheduledStart.isAcceptableOrUnknown(
+          data['scheduled_start']!,
+          _scheduledStartMeta,
+        ),
       );
     }
     if (data.containsKey('created_at')) {
@@ -317,6 +339,10 @@ class $TaskEntriesTable extends TaskEntries
         DriftSqlType.dateTime,
         data['${effectivePrefix}due_date'],
       ),
+      scheduledStart: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}scheduled_start'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -361,6 +387,7 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
   final bool isCompleted;
   final String priority;
   final DateTime? dueDate;
+  final DateTime? scheduledStart;
   final DateTime createdAt;
   final DateTime? completedAt;
   final String? category;
@@ -375,6 +402,7 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
     required this.isCompleted,
     required this.priority,
     this.dueDate,
+    this.scheduledStart,
     required this.createdAt,
     this.completedAt,
     this.category,
@@ -395,6 +423,9 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
     map['priority'] = Variable<String>(priority);
     if (!nullToAbsent || dueDate != null) {
       map['due_date'] = Variable<DateTime>(dueDate);
+    }
+    if (!nullToAbsent || scheduledStart != null) {
+      map['scheduled_start'] = Variable<DateTime>(scheduledStart);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     if (!nullToAbsent || completedAt != null) {
@@ -426,6 +457,9 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
       dueDate: dueDate == null && nullToAbsent
           ? const Value.absent()
           : Value(dueDate),
+      scheduledStart: scheduledStart == null && nullToAbsent
+          ? const Value.absent()
+          : Value(scheduledStart),
       createdAt: Value(createdAt),
       completedAt: completedAt == null && nullToAbsent
           ? const Value.absent()
@@ -456,6 +490,7 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
       isCompleted: serializer.fromJson<bool>(json['isCompleted']),
       priority: serializer.fromJson<String>(json['priority']),
       dueDate: serializer.fromJson<DateTime?>(json['dueDate']),
+      scheduledStart: serializer.fromJson<DateTime?>(json['scheduledStart']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
       category: serializer.fromJson<String?>(json['category']),
@@ -475,6 +510,7 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
       'isCompleted': serializer.toJson<bool>(isCompleted),
       'priority': serializer.toJson<String>(priority),
       'dueDate': serializer.toJson<DateTime?>(dueDate),
+      'scheduledStart': serializer.toJson<DateTime?>(scheduledStart),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'completedAt': serializer.toJson<DateTime?>(completedAt),
       'category': serializer.toJson<String?>(category),
@@ -492,6 +528,7 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
     bool? isCompleted,
     String? priority,
     Value<DateTime?> dueDate = const Value.absent(),
+    Value<DateTime?> scheduledStart = const Value.absent(),
     DateTime? createdAt,
     Value<DateTime?> completedAt = const Value.absent(),
     Value<String?> category = const Value.absent(),
@@ -506,6 +543,9 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
     isCompleted: isCompleted ?? this.isCompleted,
     priority: priority ?? this.priority,
     dueDate: dueDate.present ? dueDate.value : this.dueDate,
+    scheduledStart: scheduledStart.present
+        ? scheduledStart.value
+        : this.scheduledStart,
     createdAt: createdAt ?? this.createdAt,
     completedAt: completedAt.present ? completedAt.value : this.completedAt,
     category: category.present ? category.value : this.category,
@@ -530,6 +570,9 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
           : this.isCompleted,
       priority: data.priority.present ? data.priority.value : this.priority,
       dueDate: data.dueDate.present ? data.dueDate.value : this.dueDate,
+      scheduledStart: data.scheduledStart.present
+          ? data.scheduledStart.value
+          : this.scheduledStart,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       completedAt: data.completedAt.present
           ? data.completedAt.value
@@ -557,6 +600,7 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
           ..write('isCompleted: $isCompleted, ')
           ..write('priority: $priority, ')
           ..write('dueDate: $dueDate, ')
+          ..write('scheduledStart: $scheduledStart, ')
           ..write('createdAt: $createdAt, ')
           ..write('completedAt: $completedAt, ')
           ..write('category: $category, ')
@@ -576,6 +620,7 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
     isCompleted,
     priority,
     dueDate,
+    scheduledStart,
     createdAt,
     completedAt,
     category,
@@ -594,6 +639,7 @@ class TaskEntry extends DataClass implements Insertable<TaskEntry> {
           other.isCompleted == this.isCompleted &&
           other.priority == this.priority &&
           other.dueDate == this.dueDate &&
+          other.scheduledStart == this.scheduledStart &&
           other.createdAt == this.createdAt &&
           other.completedAt == this.completedAt &&
           other.category == this.category &&
@@ -610,6 +656,7 @@ class TaskEntriesCompanion extends UpdateCompanion<TaskEntry> {
   final Value<bool> isCompleted;
   final Value<String> priority;
   final Value<DateTime?> dueDate;
+  final Value<DateTime?> scheduledStart;
   final Value<DateTime> createdAt;
   final Value<DateTime?> completedAt;
   final Value<String?> category;
@@ -625,6 +672,7 @@ class TaskEntriesCompanion extends UpdateCompanion<TaskEntry> {
     this.isCompleted = const Value.absent(),
     this.priority = const Value.absent(),
     this.dueDate = const Value.absent(),
+    this.scheduledStart = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.completedAt = const Value.absent(),
     this.category = const Value.absent(),
@@ -641,6 +689,7 @@ class TaskEntriesCompanion extends UpdateCompanion<TaskEntry> {
     this.isCompleted = const Value.absent(),
     this.priority = const Value.absent(),
     this.dueDate = const Value.absent(),
+    this.scheduledStart = const Value.absent(),
     required DateTime createdAt,
     this.completedAt = const Value.absent(),
     this.category = const Value.absent(),
@@ -659,6 +708,7 @@ class TaskEntriesCompanion extends UpdateCompanion<TaskEntry> {
     Expression<bool>? isCompleted,
     Expression<String>? priority,
     Expression<DateTime>? dueDate,
+    Expression<DateTime>? scheduledStart,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? completedAt,
     Expression<String>? category,
@@ -675,6 +725,7 @@ class TaskEntriesCompanion extends UpdateCompanion<TaskEntry> {
       if (isCompleted != null) 'is_completed': isCompleted,
       if (priority != null) 'priority': priority,
       if (dueDate != null) 'due_date': dueDate,
+      if (scheduledStart != null) 'scheduled_start': scheduledStart,
       if (createdAt != null) 'created_at': createdAt,
       if (completedAt != null) 'completed_at': completedAt,
       if (category != null) 'category': category,
@@ -693,6 +744,7 @@ class TaskEntriesCompanion extends UpdateCompanion<TaskEntry> {
     Value<bool>? isCompleted,
     Value<String>? priority,
     Value<DateTime?>? dueDate,
+    Value<DateTime?>? scheduledStart,
     Value<DateTime>? createdAt,
     Value<DateTime?>? completedAt,
     Value<String?>? category,
@@ -709,6 +761,7 @@ class TaskEntriesCompanion extends UpdateCompanion<TaskEntry> {
       isCompleted: isCompleted ?? this.isCompleted,
       priority: priority ?? this.priority,
       dueDate: dueDate ?? this.dueDate,
+      scheduledStart: scheduledStart ?? this.scheduledStart,
       createdAt: createdAt ?? this.createdAt,
       completedAt: completedAt ?? this.completedAt,
       category: category ?? this.category,
@@ -740,6 +793,9 @@ class TaskEntriesCompanion extends UpdateCompanion<TaskEntry> {
     }
     if (dueDate.present) {
       map['due_date'] = Variable<DateTime>(dueDate.value);
+    }
+    if (scheduledStart.present) {
+      map['scheduled_start'] = Variable<DateTime>(scheduledStart.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -777,6 +833,7 @@ class TaskEntriesCompanion extends UpdateCompanion<TaskEntry> {
           ..write('isCompleted: $isCompleted, ')
           ..write('priority: $priority, ')
           ..write('dueDate: $dueDate, ')
+          ..write('scheduledStart: $scheduledStart, ')
           ..write('createdAt: $createdAt, ')
           ..write('completedAt: $completedAt, ')
           ..write('category: $category, ')
@@ -2905,6 +2962,7 @@ typedef $$TaskEntriesTableCreateCompanionBuilder =
       Value<bool> isCompleted,
       Value<String> priority,
       Value<DateTime?> dueDate,
+      Value<DateTime?> scheduledStart,
       required DateTime createdAt,
       Value<DateTime?> completedAt,
       Value<String?> category,
@@ -2922,6 +2980,7 @@ typedef $$TaskEntriesTableUpdateCompanionBuilder =
       Value<bool> isCompleted,
       Value<String> priority,
       Value<DateTime?> dueDate,
+      Value<DateTime?> scheduledStart,
       Value<DateTime> createdAt,
       Value<DateTime?> completedAt,
       Value<String?> category,
@@ -2991,6 +3050,11 @@ class $$TaskEntriesTableFilterComposer
 
   ColumnFilters<DateTime> get dueDate => $composableBuilder(
     column: $table.dueDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get scheduledStart => $composableBuilder(
+    column: $table.scheduledStart,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3094,6 +3158,11 @@ class $$TaskEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get scheduledStart => $composableBuilder(
+    column: $table.scheduledStart,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -3160,6 +3229,11 @@ class $$TaskEntriesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get dueDate =>
       $composableBuilder(column: $table.dueDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get scheduledStart => $composableBuilder(
+    column: $table.scheduledStart,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -3250,6 +3324,7 @@ class $$TaskEntriesTableTableManager
                 Value<bool> isCompleted = const Value.absent(),
                 Value<String> priority = const Value.absent(),
                 Value<DateTime?> dueDate = const Value.absent(),
+                Value<DateTime?> scheduledStart = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> completedAt = const Value.absent(),
                 Value<String?> category = const Value.absent(),
@@ -3265,6 +3340,7 @@ class $$TaskEntriesTableTableManager
                 isCompleted: isCompleted,
                 priority: priority,
                 dueDate: dueDate,
+                scheduledStart: scheduledStart,
                 createdAt: createdAt,
                 completedAt: completedAt,
                 category: category,
@@ -3282,6 +3358,7 @@ class $$TaskEntriesTableTableManager
                 Value<bool> isCompleted = const Value.absent(),
                 Value<String> priority = const Value.absent(),
                 Value<DateTime?> dueDate = const Value.absent(),
+                Value<DateTime?> scheduledStart = const Value.absent(),
                 required DateTime createdAt,
                 Value<DateTime?> completedAt = const Value.absent(),
                 Value<String?> category = const Value.absent(),
@@ -3297,6 +3374,7 @@ class $$TaskEntriesTableTableManager
                 isCompleted: isCompleted,
                 priority: priority,
                 dueDate: dueDate,
+                scheduledStart: scheduledStart,
                 createdAt: createdAt,
                 completedAt: completedAt,
                 category: category,

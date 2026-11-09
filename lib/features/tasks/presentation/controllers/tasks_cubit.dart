@@ -45,6 +45,7 @@ class TasksCubit extends Cubit<TasksState> {
     String? description,
     TaskPriority priority = TaskPriority.medium,
     DateTime? dueDate,
+    DateTime? scheduledStart,
     String? category,
     List<String> tags = const [],
     int? estimatedMinutes,
@@ -56,6 +57,7 @@ class TasksCubit extends Cubit<TasksState> {
         description: description,
         priority: priority,
         dueDate: dueDate,
+        scheduledStart: scheduledStart,
         category: category,
         tags: tags,
         estimatedMinutes: estimatedMinutes,
@@ -181,6 +183,10 @@ class TasksCubit extends Cubit<TasksState> {
         clearPriorityFilter: priority == null,
       ),
     );
+  }
+
+  void setPrioritySort(bool enabled) {
+    emit(state.copyWith(sortByPriority: enabled));
   }
 
   void setCategoryFilter(String? category) {

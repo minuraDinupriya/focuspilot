@@ -183,6 +183,12 @@ class TaskItemTile extends StatelessWidget {
                                 ],
                               ),
                             ),
+                          if (task.scheduledStart?.toLocal() case final start?)
+                            Text(
+                              'Starts ${MaterialLocalizations.of(context).formatShortDate(start)} '
+                              'at ${TimeOfDay.fromDateTime(start).format(context)}',
+                              style: theme.textTheme.labelSmall,
+                            ),
                           if (task.dueDate != null)
                             Container(
                               padding: const EdgeInsets.symmetric(

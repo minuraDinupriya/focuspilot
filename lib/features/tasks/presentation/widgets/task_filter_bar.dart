@@ -11,6 +11,8 @@ class TaskFilterBar extends StatelessWidget {
     required this.allCount,
     required this.activeCount,
     required this.completedCount,
+    required this.sortByPriority,
+    required this.onPrioritySortChanged,
     this.selectedPriority,
     this.onPrioritySelected,
     this.selectedCategory,
@@ -27,6 +29,8 @@ class TaskFilterBar extends StatelessWidget {
   final int allCount;
   final int activeCount;
   final int completedCount;
+  final bool sortByPriority;
+  final ValueChanged<bool> onPrioritySortChanged;
   final TaskPriority? selectedPriority;
   final ValueChanged<TaskPriority?>? onPrioritySelected;
   final String? selectedCategory;
@@ -75,27 +79,36 @@ class TaskFilterBar extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
             children: [
-              // Priority Popup/Filter Chip
-              PopupMenuButton<TaskPriority?>(
-                initialValue: selectedPriority,
-                onSelected: onPrioritySelected,
+              ChoiceChip(
+                label: const Text('Priority'),
+                tooltip: 'Sort by highest priority first',
+                selected: sortByPriority,
+                onSelected: onPrioritySortChanged,
+              ),
+              const SizedBox(width: 8),
+              PopupMenuButton<String>(
+                initialValue: selectedPriority?.name ?? 'all',
+                onSelected: (value) => onPrioritySelected?.call(
+                  value == 'all' ? null : TaskPriority.fromString(value),
+                ),
                 itemBuilder: (context) => [
                   const PopupMenuItem(
-                    value: null,
+                    value: 'all',
                     child: Text('All Priorities'),
                   ),
                   ...TaskPriority.values.map(
-                    (p) => PopupMenuItem(value: p, child: Text(p.displayName)),
+                    (p) => PopupMenuItem(
+                      value: p.name,
+                      child: Text(p.displayName),
+                    ),
                   ),
                 ],
-                child: FilterChip(
+                child: Chip(
                   label: Text(
                     selectedPriority == null
-                        ? 'Priority'
+                        ? 'Filter priority'
                         : selectedPriority!.displayName,
                   ),
-                  selected: selectedPriority != null,
-                  onSelected: (_) {},
                 ),
               ),
               const SizedBox(width: 8),

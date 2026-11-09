@@ -9,11 +9,16 @@ import 'package:focuspilot/features/tasks/presentation/controllers/tasks_cubit.d
 import 'package:focuspilot/features/tasks/presentation/controllers/tasks_state.dart';
 
 class TaskDetailSheet extends StatefulWidget {
-  const TaskDetailSheet({super.key, this.task});
+  const TaskDetailSheet({super.key, this.task, this.initialScheduledStart});
 
   final Task? task;
+  final DateTime? initialScheduledStart;
 
-  static Future<void> show(BuildContext context, {Task? task}) {
+  static Future<void> show(
+    BuildContext context, {
+    Task? task,
+    DateTime? initialScheduledStart,
+  }) {
     final cubit = context.read<TasksCubit>();
     return showModalBottomSheet<void>(
       context: context,
@@ -24,7 +29,10 @@ class TaskDetailSheet extends StatefulWidget {
       ),
       builder: (_) => BlocProvider.value(
         value: cubit,
-        child: TaskDetailSheet(task: task),
+        child: TaskDetailSheet(
+          task: task,
+          initialScheduledStart: initialScheduledStart,
+        ),
       ),
     );
   }
@@ -40,6 +48,7 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
   late final TextEditingController _subtaskController;
   late TaskPriority _priority;
   DateTime? _dueDate;
+  DateTime? _scheduledStart;
   String? _category;
   int? _estimatedMinutes;
   String? _recurrenceRule;
@@ -71,6 +80,8 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
     _subtaskController = TextEditingController();
     _priority = t?.priority ?? TaskPriority.medium;
     _dueDate = t?.dueDate;
+    _scheduledStart = (t?.scheduledStart ?? widget.initialScheduledStart)
+        ?.toLocal();
     _category = t?.category;
     _estimatedMinutes = t?.estimatedMinutes;
     _recurrenceRule = t?.recurrenceRule;
@@ -95,6 +106,7 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
       description: description.isEmpty ? null : description,
       priority: _priority,
       dueDate: _dueDate,
+      scheduledStart: _scheduledStart,
       category: _category,
       estimatedMinutes: _estimatedMinutes,
       recurrenceRule: _recurrenceRule == 'none' ? null : _recurrenceRule,
@@ -111,6 +123,7 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
             description: details.description,
             priority: details.priority,
             dueDate: details.dueDate,
+            scheduledStart: details.scheduledStart,
             category: details.category,
             estimatedMinutes: details.estimatedMinutes,
             recurrenceRule: details.recurrenceRule,
@@ -141,6 +154,34 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
     }
   }
 
+  Future<void> _pickScheduledStart() async {
+    final initial = _scheduledStart ?? DateTime.now();
+    FocusScope.of(context).unfocus();
+    final day = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(initial.year - 10),
+      lastDate: DateTime(initial.year + 10, 12, 31),
+      helpText: 'Choose a start date',
+    );
+    if (day == null || !mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+      helpText: 'Choose a start time',
+    );
+    if (time == null || !mounted) return;
+    setState(() {
+      _scheduledStart = DateTime(
+        day.year,
+        day.month,
+        day.day,
+        time.hour,
+        time.minute,
+      );
+    });
+  }
+
   void _handleAddSubtask() {
     final text = _subtaskController.text.trim();
     if (text.isEmpty || widget.task == null) return;
@@ -151,6 +192,8 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final localizations = MaterialLocalizations.of(context);
+    final scheduledStart = _scheduledStart;
     final openingTask = widget.task;
     final isEditing = openingTask != null;
     final task = openingTask == null
@@ -271,6 +314,34 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                       },
                     );
                   }),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              Text('Planned Start', style: theme.textTheme.labelLarge),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Flexible(
+                    child: OutlinedButton.icon(
+                      onPressed: _isSaving ? null : _pickScheduledStart,
+                      icon: const Icon(Icons.event_outlined, size: 16),
+                      label: Text(
+                        scheduledStart == null
+                            ? 'Set start date and time'
+                            : '${localizations.formatMediumDate(scheduledStart)} · '
+                                  '${TimeOfDay.fromDateTime(scheduledStart).format(context)}',
+                      ),
+                    ),
+                  ),
+                  if (scheduledStart != null)
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 18),
+                      tooltip: 'Clear planned start',
+                      onPressed: _isSaving
+                          ? null
+                          : () => setState(() => _scheduledStart = null),
+                    ),
                 ],
               ),
               const SizedBox(height: 16),

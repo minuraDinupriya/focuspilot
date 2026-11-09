@@ -14,6 +14,7 @@ class TaskEntries extends Table {
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
   TextColumn get priority => text().withDefault(const Constant('medium'))();
   DateTimeColumn get dueDate => dateTime().nullable()();
+  DateTimeColumn get scheduledStart => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get completedAt => dateTime().nullable()();
   TextColumn get category => text().nullable()();
@@ -101,7 +102,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -160,6 +161,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 9) {
         await m.addColumn(userSettingsEntries, userSettingsEntries.themeMode);
+      }
+      if (from < 10) {
+        await m.addColumn(taskEntries, taskEntries.scheduledStart);
       }
     },
   );
