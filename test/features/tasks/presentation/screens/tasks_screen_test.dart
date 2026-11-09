@@ -71,6 +71,27 @@ void main() {
       expect(find.byType(TaskItemTile), findsNWidgets(2));
     });
 
+    testWidgets('Priority sorts matching tasks highest first', (tester) async {
+      repository.emitTasks([
+        Task.create(title: 'Plan notes', priority: TaskPriority.low),
+        Task.create(title: 'Plan launch', priority: TaskPriority.high),
+        Task.create(title: 'Other task', priority: TaskPriority.high),
+        Task.create(title: 'Plan review'),
+      ]);
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, 'plan');
+      await tester.tap(find.text('Priority'));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widgetList<TaskItemTile>(find.byType(TaskItemTile))
+            .map((tile) => tile.task.title),
+        ['Plan launch', 'Plan review', 'Plan notes'],
+      );
+    });
+
     testWidgets('tapping Add Task opens bottom sheet', (tester) async {
       repository.emitTasks([]);
       await tester.pumpWidget(createWidgetUnderTest());

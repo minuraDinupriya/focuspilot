@@ -56,6 +56,7 @@ class TasksScreen extends StatelessWidget {
             );
           }
 
+          final visibleTasks = state.filteredTasks;
           return Column(
             children: [
               // Search Bar
@@ -101,6 +102,10 @@ class TasksScreen extends StatelessWidget {
                 allCount: state.tasks.length,
                 activeCount: state.activeTasksCount,
                 completedCount: state.completedTasksCount,
+                sortByPriority: state.sortByPriority,
+                onPrioritySortChanged: context
+                    .read<TasksCubit>()
+                    .setPrioritySort,
                 selectedPriority: state.priorityFilter,
                 onPrioritySelected: (priority) {
                   context.read<TasksCubit>().setPriorityFilter(priority);
@@ -120,7 +125,7 @@ class TasksScreen extends StatelessWidget {
                 },
               ),
               Expanded(
-                child: state.filteredTasks.isEmpty
+                child: visibleTasks.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -155,9 +160,9 @@ class TasksScreen extends StatelessWidget {
                       )
                     : ListView.builder(
                         padding: const EdgeInsets.only(bottom: 80, top: 4),
-                        itemCount: state.filteredTasks.length,
+                        itemCount: visibleTasks.length,
                         itemBuilder: (context, index) {
-                          final task = state.filteredTasks[index];
+                          final task = visibleTasks[index];
                           return TaskItemTile(
                             task: task,
                             onTap: () =>

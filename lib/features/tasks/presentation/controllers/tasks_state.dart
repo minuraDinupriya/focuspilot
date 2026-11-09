@@ -33,6 +33,7 @@ class TasksState extends Equatable {
     this.filter = TasksFilter.all,
     this.searchQuery = '',
     this.priorityFilter,
+    this.sortByPriority = false,
     this.categoryFilter,
     this.dueDateFilter = DueDateFilter.all,
     this.errorMessage,
@@ -43,6 +44,7 @@ class TasksState extends Equatable {
   final TasksFilter filter;
   final String searchQuery;
   final TaskPriority? priorityFilter;
+  final bool sortByPriority;
   final String? categoryFilter;
   final DueDateFilter dueDateFilter;
   final String? errorMessage;
@@ -63,7 +65,7 @@ class TasksState extends Equatable {
     final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
     final weekEnd = todayStart.add(const Duration(days: 7));
 
-    return tasks.where((task) {
+    final matches = tasks.where((task) {
       // 1. Search Query
       if (searchQuery.isNotEmpty) {
         final query = searchQuery.toLowerCase();
@@ -124,6 +126,12 @@ class TasksState extends Equatable {
 
       return true;
     }).toList();
+    if (!sortByPriority) return matches;
+
+    return [
+      for (final priority in TaskPriority.values.reversed)
+        ...matches.where((task) => task.priority == priority),
+    ];
   }
 
   int get activeTasksCount => tasks.where((task) => !task.isCompleted).length;
@@ -136,6 +144,7 @@ class TasksState extends Equatable {
     TasksFilter? filter,
     String? searchQuery,
     TaskPriority? priorityFilter,
+    bool? sortByPriority,
     bool clearPriorityFilter = false,
     String? categoryFilter,
     bool clearCategoryFilter = false,
@@ -148,6 +157,7 @@ class TasksState extends Equatable {
       tasks: tasks ?? this.tasks,
       filter: filter ?? this.filter,
       searchQuery: searchQuery ?? this.searchQuery,
+      sortByPriority: sortByPriority ?? this.sortByPriority,
       priorityFilter: clearPriorityFilter
           ? null
           : (priorityFilter ?? this.priorityFilter),
@@ -168,6 +178,7 @@ class TasksState extends Equatable {
     filter,
     searchQuery,
     priorityFilter,
+    sortByPriority,
     categoryFilter,
     dueDateFilter,
     errorMessage,

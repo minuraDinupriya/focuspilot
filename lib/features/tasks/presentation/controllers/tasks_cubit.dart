@@ -183,6 +183,10 @@ class TasksCubit extends Cubit<TasksState> {
     );
   }
 
+  void setPrioritySort(bool enabled) {
+    emit(state.copyWith(sortByPriority: enabled));
+  }
+
   void setCategoryFilter(String? category) {
     emit(
       state.copyWith(
