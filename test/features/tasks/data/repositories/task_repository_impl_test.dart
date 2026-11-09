@@ -19,6 +19,41 @@ void main() {
     await database.close();
   });
 
+  test('v9 task rows survive migration with no planned start', () async {
+    final upgraded = AppDatabase(
+      NativeDatabase.memory(
+        setup: (db) {
+          db.execute('''
+            CREATE TABLE task_entries (
+              id TEXT NOT NULL PRIMARY KEY,
+              title TEXT NOT NULL,
+              description TEXT,
+              is_completed INTEGER NOT NULL DEFAULT 0,
+              priority TEXT NOT NULL DEFAULT 'medium',
+              due_date INTEGER,
+              created_at INTEGER NOT NULL,
+              completed_at INTEGER,
+              category TEXT,
+              tags TEXT NOT NULL DEFAULT '',
+              estimated_minutes INTEGER,
+              actual_minutes INTEGER NOT NULL DEFAULT 0,
+              recurrence_rule TEXT
+            );
+            INSERT INTO task_entries (id, title, created_at, actual_minutes)
+            VALUES ('existing', 'Saved task', 1794500000, 25);
+            PRAGMA user_version = 9;
+          ''');
+        },
+      ),
+    );
+    addTearDown(upgraded.close);
+
+    final task = await upgraded.select(upgraded.taskEntries).getSingle();
+    expect(task.title, 'Saved task');
+    expect(task.actualMinutes, 25);
+    expect(task.scheduledStart, isNull);
+  });
+
   group('TaskRepositoryImpl', () {
     final task1 = Task(
       id: 'task-1',
@@ -54,6 +89,25 @@ void main() {
 
       expect(found, equals(task1));
       expect(notFound, isNull);
+    });
+
+    test('persists a planned start independently of the due date', () async {
+      final start = DateTime(2026, 11, 19, 9, 30);
+      final due = DateTime(2026, 11, 20);
+      final task = task1.copyWith(scheduledStart: start, dueDate: due);
+      await repository.saveTask(task);
+      expect(
+        (await repository.watchTasks().first).single.scheduledStart,
+        start,
+      );
+
+      await repository.updateTaskDetails(
+        task.id,
+        TaskDetails(title: task.title, priority: task.priority, dueDate: due),
+      );
+      final updated = await repository.getTaskById(task.id);
+      expect(updated?.scheduledStart, isNull);
+      expect(updated?.dueDate, due);
     });
 
     test('deleteTask removes task from database', () async {

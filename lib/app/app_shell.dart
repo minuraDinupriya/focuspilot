@@ -5,6 +5,7 @@ import 'package:focuspilot/features/focus/presentation/controllers/focus_event.d
 import 'package:focuspilot/features/focus/presentation/focus_screen.dart';
 import 'package:focuspilot/features/settings/presentation/widgets/settings_sheet.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
+import 'package:focuspilot/features/tasks/presentation/planner_screen.dart';
 import 'package:focuspilot/features/tasks/presentation/tasks_screen.dart';
 import 'package:focuspilot/features/today/presentation/today_screen.dart';
 
@@ -66,6 +67,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       ),
       const TasksScreen(),
       const FocusScreen(),
+      const PlannerScreen(),
     ];
 
     return Scaffold(
@@ -98,6 +100,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
             icon: Icon(Icons.timer_outlined),
             selectedIcon: Icon(Icons.timer),
             label: 'Focus',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.calendar_month_outlined),
+            selectedIcon: Icon(Icons.calendar_month),
+            label: 'Planner',
           ),
         ],
       ),

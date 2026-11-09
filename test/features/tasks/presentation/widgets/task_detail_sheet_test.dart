@@ -63,6 +63,45 @@ Future<void> _tapVisible(WidgetTester tester, Finder finder) async {
 }
 
 void main() {
+  testWidgets('can choose a start date and time when creating a task', (
+    tester,
+  ) async {
+    final repository = FakeTaskRepository();
+    await _openEditor(tester, repository);
+    await tester.enterText(
+      find.byType(TextFormField).first,
+      'Scheduled review',
+    );
+    await _tapVisible(tester, find.text('Set start date and time'));
+    expect(find.text('Choose a start date'), findsOneWidget);
+    await _tapVisible(tester, find.text('OK'));
+    expect(find.text('Choose a start time'), findsOneWidget);
+    await _tapVisible(tester, find.text('OK'));
+    await _tapVisible(tester, find.text('Create Task'));
+
+    final task = repository.tasks.single;
+    expect(task.scheduledStart, isNotNull);
+    expect(task.dueDate, isNull);
+  });
+
+  testWidgets('can clear a planned start while retaining the due date', (
+    tester,
+  ) async {
+    final repository = FakeTaskRepository();
+    final due = DateTime(2026, 11, 20);
+    final task = Task.create(
+      title: 'Review graphs',
+      dueDate: due,
+      scheduledStart: DateTime(2026, 11, 19, 9),
+    );
+    await _openEditor(tester, repository, task: task);
+    await _tapVisible(tester, find.byTooltip('Clear planned start'));
+    await _tapVisible(tester, find.text('Save Changes'));
+
+    expect(repository.tasks.single.scheduledStart, isNull);
+    expect(repository.tasks.single.dueDate, due);
+  });
+
   testWidgets(
     'checklist updates live and remains intact after saving details',
     (tester) async {

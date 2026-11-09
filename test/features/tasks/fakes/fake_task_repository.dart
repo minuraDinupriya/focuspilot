@@ -62,6 +62,8 @@ class FakeTaskRepository implements TaskRepository {
       clearDescription: details.description == null,
       dueDate: details.dueDate,
       clearDueDate: details.dueDate == null,
+      scheduledStart: details.scheduledStart,
+      clearScheduledStart: details.scheduledStart == null,
       category: details.category,
       clearCategory: details.category == null,
       estimatedMinutes: details.estimatedMinutes,
