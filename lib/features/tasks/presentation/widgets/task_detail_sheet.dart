@@ -189,11 +189,70 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
     _subtaskController.clear();
   }
 
+  Future<void> _pickCustomEstimate() async {
+    final formKey = GlobalKey<FormState>();
+    var input = _estimatedMinutes?.toString() ?? '';
+    final minutes = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) {
+        void applyEstimate() {
+          if (formKey.currentState?.validate() ?? false) {
+            Navigator.pop(dialogContext, int.parse(input.trim(), radix: 10));
+          }
+        }
+
+        return AlertDialog(
+          title: const Text('Custom task estimate'),
+          scrollable: true,
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              initialValue: input,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.done,
+              decoration: const InputDecoration(
+                labelText: 'Minutes',
+                helperText: 'For 1 hour 15 minutes, enter 75.',
+                helperMaxLines: 2,
+                errorMaxLines: 2,
+              ),
+              onChanged: (value) => input = value,
+              onFieldSubmitted: (_) => applyEstimate(),
+              validator: (value) {
+                final minutes = int.tryParse(value?.trim() ?? '', radix: 10);
+                return minutes == null || minutes < 1
+                    ? 'Enter a positive whole number of minutes.'
+                    : null;
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: applyEstimate,
+              child: const Text('Set estimate'),
+            ),
+          ],
+        );
+      },
+    );
+    if (minutes != null && mounted) {
+      setState(() => _estimatedMinutes = minutes);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final localizations = MaterialLocalizations.of(context);
     final scheduledStart = _scheduledStart;
+    final estimate = _estimatedMinutes;
+    final hasCustomEstimate =
+        estimate != null && !_estimatedOptions.contains(estimate);
     final openingTask = widget.task;
     final isEditing = openingTask != null;
     final task = openingTask == null
@@ -467,21 +526,39 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                 const SizedBox(height: 16),
               ],
 
-              // Estimated Focus Time
-              Text('Estimated Focus Time', style: theme.textTheme.labelLarge),
+              Text('Estimated Duration', style: theme.textTheme.labelLarge),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
-                children: _estimatedOptions.map((m) {
-                  final isSelected = _estimatedMinutes == m;
-                  return ChoiceChip(
-                    label: Text('$m min'),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      setState(() => _estimatedMinutes = selected ? m : null);
-                    },
-                  );
-                }).toList(),
+                children: [
+                  for (final minutes in _estimatedOptions)
+                    ChoiceChip(
+                      label: Text('$minutes min'),
+                      selected: estimate == minutes,
+                      onSelected: _isSaving
+                          ? null
+                          : (selected) => setState(
+                              () =>
+                                  _estimatedMinutes = selected ? minutes : null,
+                            ),
+                    ),
+                  if (hasCustomEstimate)
+                    InputChip(
+                      label: Text('$estimate min · Custom'),
+                      selected: true,
+                      onPressed: _isSaving ? null : _pickCustomEstimate,
+                      deleteButtonTooltipMessage: 'Clear custom estimate',
+                      onDeleted: _isSaving
+                          ? null
+                          : () => setState(() => _estimatedMinutes = null),
+                    )
+                  else
+                    ActionChip(
+                      avatar: const Icon(Icons.edit_outlined, size: 16),
+                      label: const Text('Custom'),
+                      onPressed: _isSaving ? null : _pickCustomEstimate,
+                    ),
+                ],
               ),
               const SizedBox(height: 16),
 
