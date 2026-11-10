@@ -43,7 +43,12 @@ Future<void> _openEditor(
         child: Scaffold(
           body: Builder(
             builder: (context) => TextButton(
-              onPressed: () => TaskDetailSheet.show(context, task: task),
+              onPressed: () => TaskDetailSheet.show(
+                context,
+                task: repository.tasks
+                    .where((t) => t.id == task?.id)
+                    .firstOrNull,
+              ),
               child: const Text('Open task editor'),
             ),
           ),
@@ -63,6 +68,63 @@ Future<void> _tapVisible(WidgetTester tester, Finder finder) async {
 }
 
 void main() {
+  testWidgets('creates a task with a validated custom estimate', (
+    tester,
+  ) async {
+    final repository = FakeTaskRepository();
+    await _openEditor(tester, repository);
+    await tester.enterText(find.byType(TextFormField).first, 'Prepare slides');
+    await _tapVisible(tester, find.text('Custom'));
+
+    final minutes = find.widgetWithText(TextFormField, 'Minutes');
+    await tester.enterText(minutes, '0');
+    await _tapVisible(tester, find.text('Set estimate'));
+    expect(
+      find.text('Enter a positive whole number of minutes.'),
+      findsOneWidget,
+    );
+    await tester.enterText(minutes, '12.5');
+    await _tapVisible(tester, find.text('Set estimate'));
+    expect(find.text('Custom task estimate'), findsOneWidget);
+
+    await tester.enterText(minutes, '75');
+    await _tapVisible(tester, find.text('Set estimate'));
+    expect(find.text('75 min · Custom'), findsOneWidget);
+    await _tapVisible(tester, find.text('Create Task'));
+    expect(repository.tasks.single.estimatedMinutes, 75);
+  });
+
+  testWidgets('reopens, edits, and clears a custom estimate', (tester) async {
+    final repository = FakeTaskRepository();
+    final task = Task.create(title: 'Prepare slides', estimatedMinutes: 75);
+    await _openEditor(tester, repository, task: task);
+
+    await _tapVisible(tester, find.text('75 min · Custom'));
+    final minutes = find.widgetWithText(TextFormField, 'Minutes');
+    expect(tester.widget<TextFormField>(minutes).initialValue, '75');
+    await tester.enterText(minutes, '120');
+    await _tapVisible(
+      tester,
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('Cancel'),
+      ),
+    );
+    expect(find.text('75 min · Custom'), findsOneWidget);
+
+    await _tapVisible(tester, find.text('75 min · Custom'));
+    await tester.enterText(minutes, '120');
+    await _tapVisible(tester, find.text('Set estimate'));
+    await _tapVisible(tester, find.text('Save Changes'));
+    expect(repository.tasks.single.estimatedMinutes, 120);
+
+    await _tapVisible(tester, find.text('Open task editor'));
+    expect(find.text('120 min · Custom'), findsOneWidget);
+    await _tapVisible(tester, find.byTooltip('Clear custom estimate'));
+    await _tapVisible(tester, find.text('Save Changes'));
+    expect(repository.tasks.single.estimatedMinutes, isNull);
+  });
+
   testWidgets('can choose a start date and time when creating a task', (
     tester,
   ) async {
