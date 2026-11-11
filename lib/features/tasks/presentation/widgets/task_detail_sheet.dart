@@ -225,8 +225,9 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
         _subtaskError = null;
       });
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() => _subtaskError = 'Couldn’t delete the subtask.');
+      }
     }
   }
 
@@ -673,9 +674,9 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                       key: ValueKey(s.id),
                       dense: true,
                       contentPadding: EdgeInsets.zero,
-                      title: const Semantics(
+                      title: Semantics(
                         liveRegion: true,
-                        child: Text('Subtask deleted'),
+                        child: const Text('Subtask deleted'),
                       ),
                       subtitle: Text(s.title),
                       trailing: TextButton(
