@@ -2,11 +2,13 @@ import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:focuspilot/features/tasks/domain/models/subtask.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
 import 'package:focuspilot/features/tasks/domain/models/task_details.dart';
 import 'package:focuspilot/features/tasks/domain/models/task_priority.dart';
 import 'package:focuspilot/features/tasks/presentation/controllers/tasks_cubit.dart';
 import 'package:focuspilot/features/tasks/presentation/controllers/tasks_state.dart';
+import 'package:focuspilot/features/tasks/presentation/widgets/task_delete_undo.dart';
 
 class TaskDetailSheet extends StatefulWidget {
   const TaskDetailSheet({super.key, this.task, this.initialScheduledStart});
@@ -54,6 +56,10 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
   String? _recurrenceRule;
   bool _isSaving = false;
   bool _saveFailed = false;
+  bool _isDeleting = false;
+  bool _deleteFailed = false;
+  final _deletedSubtasks = <String, Subtask>{};
+  String? _subtaskError;
 
   static const _categories = [
     'Study',
@@ -189,6 +195,59 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
     _subtaskController.clear();
   }
 
+  Future<void> _deleteTask(String id) async {
+    if (_isSaving || _isDeleting) return;
+    setState(() {
+      _isDeleting = true;
+      _deleteFailed = false;
+    });
+    final deleted = await deleteTaskWithUndo(
+      context,
+      id,
+      onFailure: () {
+        if (mounted) setState(() => _deleteFailed = true);
+      },
+    );
+    if (!mounted) return;
+    if (deleted && ModalRoute.of(context)?.isCurrent == true) {
+      Navigator.of(context).pop();
+      return;
+    }
+    setState(() => _isDeleting = false);
+  }
+
+  Future<void> _deleteSubtask(String id) async {
+    try {
+      final subtask = await context.read<TasksCubit>().deleteSubtask(id);
+      if (!mounted || subtask == null) return;
+      setState(() {
+        _deletedSubtasks[id] = subtask;
+        _subtaskError = null;
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() => _subtaskError = 'Couldn’t delete the subtask.');
+      }
+    }
+  }
+
+  Future<void> _restoreSubtask(Subtask subtask) async {
+    try {
+      await context.read<TasksCubit>().restoreSubtask(subtask);
+      if (!mounted) return;
+      setState(() {
+        _deletedSubtasks.remove(subtask.id);
+        _subtaskError = null;
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _subtaskError = 'Couldn’t restore the subtask. Try Undo again.',
+        );
+      }
+    }
+  }
+
   Future<void> _pickCustomEstimate() async {
     final formKey = GlobalKey<FormState>();
     var input = _estimatedMinutes?.toString() ?? '';
@@ -266,6 +325,12 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                 (state.status == TasksStatus.loading ? openingTask : null);
           });
     final isUnavailable = isEditing && task == null;
+    final isBusy = _isSaving || _isDeleting;
+    final checklist = {
+      ..._deletedSubtasks,
+      for (final subtask in task?.subtasks ?? const <Subtask>[])
+        subtask.id: subtask,
+    }.values.toList()..sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
 
     final form = Padding(
       padding: EdgeInsets.only(
@@ -300,10 +365,7 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                         color: theme.colorScheme.error,
                       ),
                       tooltip: 'Delete task',
-                      onPressed: () {
-                        context.read<TasksCubit>().deleteTask(task.id);
-                        Navigator.of(context).pop();
-                      },
+                      onPressed: isBusy ? null : () => _deleteTask(task.id),
                     ),
                 ],
               ),
@@ -606,7 +668,23 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                 const SizedBox(height: 8),
 
                 // Subtask list items
-                ...task.subtasks.map((s) {
+                ...checklist.map((s) {
+                  if (_deletedSubtasks.containsKey(s.id)) {
+                    return ListTile(
+                      key: ValueKey(s.id),
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: Semantics(
+                        liveRegion: true,
+                        child: const Text('Subtask deleted'),
+                      ),
+                      subtitle: Text(s.title),
+                      trailing: TextButton(
+                        onPressed: () => _restoreSubtask(s),
+                        child: const Text('Undo'),
+                      ),
+                    );
+                  }
                   return ListTile(
                     key: ValueKey(s.id),
                     dense: true,
@@ -631,12 +709,12 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                     trailing: IconButton(
                       icon: const Icon(Icons.delete_outline, size: 18),
                       tooltip: 'Delete subtask',
-                      onPressed: () {
-                        context.read<TasksCubit>().deleteSubtask(s.id);
-                      },
+                      onPressed: () => _deleteSubtask(s.id),
                     ),
                   );
                 }),
+                if (_subtaskError case final message?)
+                  Semantics(liveRegion: true, child: Text(message)),
 
                 // Add subtask inline input
                 Row(
@@ -665,12 +743,14 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                 const SizedBox(height: 20),
               ],
 
-              if (isUnavailable || _saveFailed) ...[
+              if (isUnavailable || _saveFailed || _deleteFailed) ...[
                 Semantics(
                   liveRegion: true,
                   child: Text(
                     isUnavailable
                         ? 'This task is no longer available.'
+                        : _deleteFailed
+                        ? 'Couldn’t delete the task. Try again.'
                         : 'Could not save this task. Try again.',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.error,
@@ -687,15 +767,17 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
                 runSpacing: 8,
                 children: [
                   TextButton(
-                    onPressed: _isSaving
+                    onPressed: isBusy
                         ? null
                         : () => Navigator.of(context).pop(),
                     child: const Text('Cancel'),
                   ),
                   FilledButton(
-                    onPressed: _isSaving || isUnavailable ? null : _submit,
+                    onPressed: isBusy || isUnavailable ? null : _submit,
                     child: Text(
-                      _isSaving
+                      _isDeleting
+                          ? 'Deleting…'
+                          : _isSaving
                           ? 'Saving...'
                           : (isEditing ? 'Save Changes' : 'Create Task'),
                     ),
@@ -709,8 +791,8 @@ class _TaskDetailSheetState extends State<TaskDetailSheet> {
       ),
     );
     return ExcludeFocus(
-      excluding: _isSaving,
-      child: AbsorbPointer(absorbing: _isSaving, child: form),
+      excluding: isBusy,
+      child: AbsorbPointer(absorbing: isBusy, child: form),
     );
   }
 }

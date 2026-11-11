@@ -68,6 +68,56 @@ Future<void> _tapVisible(WidgetTester tester, Finder finder) async {
 }
 
 void main() {
+  testWidgets('Undo restores a task deleted from the editor', (tester) async {
+    final repository = FakeTaskRepository();
+    final task = Task.create(title: 'Draft agenda', estimatedMinutes: 40);
+    await _openEditor(tester, repository, task: task);
+    await _tapVisible(tester, find.byTooltip('Delete task'));
+
+    expect(find.byType(TaskDetailSheet), findsNothing);
+    expect(repository.tasks, isEmpty);
+    await _tapVisible(tester, find.text('Undo'));
+    expect(repository.tasks.single, task);
+  });
+
+  testWidgets(
+    'subtask undo restores its checkmark and position in the editor',
+    (tester) async {
+      final repository = FakeTaskRepository();
+      final task = Task.create(title: 'Draft agenda');
+      final completed = Subtask(
+        id: 'review',
+        taskId: task.id,
+        title: 'Review outline',
+        isCompleted: true,
+      );
+      final later = Subtask(
+        id: 'share',
+        taskId: task.id,
+        title: 'Share draft',
+        orderIndex: 1,
+      );
+      await _openEditor(
+        tester,
+        repository,
+        task: task.copyWith(subtasks: [completed, later]),
+      );
+      final row = find.byKey(const ValueKey('review'));
+      await _tapVisible(
+        tester,
+        find.descendant(of: row, matching: find.byTooltip('Delete subtask')),
+      );
+      expect(repository.tasks.single.subtasks, [later]);
+      expect(find.byType(TaskDetailSheet), findsOneWidget);
+      await _tapVisible(
+        tester,
+        find.descendant(of: row, matching: find.text('Undo')),
+      );
+      expect(repository.tasks.single.subtasks, [completed, later]);
+      expect(find.text('Subtask deleted'), findsNothing);
+    },
+  );
+
   testWidgets('creates a task with a validated custom estimate', (
     tester,
   ) async {
@@ -207,7 +257,7 @@ void main() {
           matching: find.byTooltip('Delete subtask'),
         ),
       );
-      expect(find.text('Discard draft'), findsNothing);
+      expect(find.text('Subtask deleted'), findsOneWidget);
       expect(find.text('Subtasks (1/1)'), findsOneWidget);
 
       final addField = find.widgetWithText(TextField, 'Add a subtask...');

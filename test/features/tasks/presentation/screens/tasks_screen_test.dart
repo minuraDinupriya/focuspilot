@@ -16,7 +16,6 @@ void main() {
 
   setUp(() {
     repository = FakeTaskRepository();
-    cubit = TasksCubit(repository);
   });
 
   tearDown(() async {
@@ -25,6 +24,7 @@ void main() {
   });
 
   Widget createWidgetUnderTest() {
+    cubit = TasksCubit(repository);
     return MaterialApp(
       home: BlocProvider<TasksCubit>.value(
         value: cubit,
@@ -91,6 +91,30 @@ void main() {
         ['Plan launch', 'Plan review', 'Plan notes'],
       );
     });
+
+    for (final swipe in [false, true]) {
+      testWidgets('can undo deletion by ${swipe ? 'swipe' : 'trash button'}', (
+        tester,
+      ) async {
+        final task = Task.create(title: 'Write a draft');
+        repository.emitTasks([task]);
+        await tester.pumpWidget(createWidgetUnderTest());
+        await tester.pumpAndSettle();
+
+        if (swipe) {
+          await tester.drag(find.byType(Dismissible), const Offset(-500, 0));
+        } else {
+          await tester.tap(find.byTooltip('Delete task'));
+        }
+        await tester.pumpAndSettle();
+        expect(repository.tasks, isEmpty);
+        expect(find.byType(TaskItemTile), findsNothing);
+        await tester.tap(find.text('Undo'));
+        await tester.pumpAndSettle();
+        expect(repository.tasks.single, task);
+        expect(find.byType(TaskItemTile), findsOneWidget);
+      });
+    }
 
     testWidgets('tapping Add Task opens bottom sheet', (tester) async {
       repository.emitTasks([]);

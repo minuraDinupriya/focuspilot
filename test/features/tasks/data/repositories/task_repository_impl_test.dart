@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focuspilot/features/tasks/data/datasources/database/app_database.dart';
 import 'package:focuspilot/features/tasks/data/repositories/task_repository_impl.dart';
+import 'package:focuspilot/features/tasks/domain/models/subtask.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
 import 'package:focuspilot/features/tasks/domain/models/task_details.dart';
 import 'package:focuspilot/features/tasks/domain/models/task_priority.dart';
@@ -120,6 +121,55 @@ void main() {
       expect(tasks.length, 1);
       expect(tasks.first.id, 'task-2');
     });
+
+    test(
+      'restores the deleted task snapshot, including its checklist',
+      () async {
+        final task = task1.copyWith(
+          scheduledStart: DateTime(2026, 11, 15, 9),
+          estimatedMinutes: 75,
+          actualMinutes: 42,
+          isCompleted: true,
+          completedAt: DateTime(2026, 11, 15, 10),
+          subtasks: [
+            Subtask(
+              id: 'completed',
+              taskId: task1.id,
+              title: 'First step',
+              isCompleted: true,
+            ),
+          ],
+        );
+        await repository.saveTask(task);
+        final deleted = await repository.deleteTask(task.id);
+        expect(deleted, task);
+        expect(await repository.getTaskById(task.id), isNull);
+        await repository.restoreTask(deleted!);
+        expect(await repository.getTaskById(task.id), task);
+        await repository.addActualMinutes(task.id, 5);
+        await repository.restoreTask(deleted);
+        expect((await repository.getTaskById(task.id))?.actualMinutes, 47);
+      },
+    );
+
+    test(
+      'undoing a subtask restores its state ahead of a new subtask',
+      () async {
+        await repository.saveTask(task1);
+        await repository.addSubtask(task1.id, 'First step');
+        final original = (await repository.getTaskById(task1.id))!
+            .subtasks
+            .single;
+        await repository.toggleSubtaskCompletion(original.id);
+        final deleted = await repository.deleteSubtask(original.id);
+        await repository.addSubtask(task1.id, 'New step');
+        await repository.restoreSubtask(deleted!);
+
+        final subtasks = (await repository.getTaskById(task1.id))!.subtasks;
+        expect(subtasks.first, original.copyWith(isCompleted: true));
+        expect(subtasks.last.title, 'New step');
+      },
+    );
 
     test(
       'toggleTaskCompletion flips isCompleted and completes timestamp',

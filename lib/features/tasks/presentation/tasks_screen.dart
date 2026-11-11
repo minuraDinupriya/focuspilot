@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:focuspilot/features/tasks/presentation/controllers/tasks_cubit.dart';
 import 'package:focuspilot/features/tasks/presentation/controllers/tasks_state.dart';
+import 'package:focuspilot/features/tasks/presentation/widgets/task_delete_undo.dart';
 import 'package:focuspilot/features/tasks/presentation/widgets/task_detail_sheet.dart';
 import 'package:focuspilot/features/tasks/presentation/widgets/task_filter_bar.dart';
 import 'package:focuspilot/features/tasks/presentation/widgets/task_item_tile.dart';
@@ -170,15 +171,8 @@ class TasksScreen extends StatelessWidget {
                             onToggle: (_) {
                               context.read<TasksCubit>().toggleTask(task.id);
                             },
-                            onDelete: () {
-                              context.read<TasksCubit>().deleteTask(task.id);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Deleted "${task.title}"'),
-                                  duration: const Duration(seconds: 2),
-                                ),
-                              );
-                            },
+                            onDelete: () =>
+                                deleteTaskWithUndo(context, task.id),
                           );
                         },
                       ),

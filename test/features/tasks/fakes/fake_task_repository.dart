@@ -76,9 +76,17 @@ class FakeTaskRepository implements TaskRepository {
   }
 
   @override
-  Future<void> deleteTask(String id) async {
-    _tasks.removeWhere((t) => t.id == id);
+  Future<Task?> deleteTask(String id) async {
+    final index = _tasks.indexWhere((task) => task.id == id);
+    if (index < 0) return null;
+    final task = _tasks.removeAt(index);
     _controller.add(List.unmodifiable(_tasks));
+    return task;
+  }
+
+  @override
+  Future<void> restoreTask(Task task) async {
+    if (!_tasks.any((existing) => existing.id == task.id)) await saveTask(task);
   }
 
   @override
@@ -145,17 +153,30 @@ class FakeTaskRepository implements TaskRepository {
   }
 
   @override
-  Future<void> deleteSubtask(String subtaskId) async {
+  Future<Subtask?> deleteSubtask(String subtaskId) async {
     for (var i = 0; i < _tasks.length; i++) {
       final task = _tasks[i];
-      if (task.subtasks.any((s) => s.id == subtaskId)) {
+      final deleted = task.subtasks.where((s) => s.id == subtaskId).firstOrNull;
+      if (deleted != null) {
         final updatedSubtasks = task.subtasks
             .where((s) => s.id != subtaskId)
             .toList();
         await saveTask(task.copyWith(subtasks: updatedSubtasks));
-        return;
+        return deleted;
       }
     }
+    return null;
+  }
+
+  @override
+  Future<void> restoreSubtask(Subtask subtask) async {
+    final index = _tasks.indexWhere((task) => task.id == subtask.taskId);
+    if (index < 0) throw StateError('Parent task is missing');
+    final task = _tasks[index];
+    if (task.subtasks.any((existing) => existing.id == subtask.id)) return;
+    final subtasks = [...task.subtasks, subtask]
+      ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+    await saveTask(task.copyWith(subtasks: subtasks));
   }
 
   void dispose() {
