@@ -163,14 +163,28 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
-  Future<void> deleteTask(String id) async {
-    final subtasksQuery = _database.delete(_database.subtaskEntries)
-      ..where((tbl) => tbl.taskId.equals(id));
-    await subtasksQuery.go();
+  Future<Task?> deleteTask(String id) {
+    return _database.transaction(() async {
+      final task = await getTaskById(id);
+      if (task == null) return null;
 
-    final query = _database.delete(_database.taskEntries)
-      ..where((tbl) => tbl.id.equals(id));
-    await query.go();
+      final query = _database.delete(_database.taskEntries)
+        ..where((tbl) => tbl.id.equals(id));
+      await query.go();
+      return task;
+    });
+  }
+
+  @override
+  Future<void> restoreTask(Task task) {
+    return _database.transaction(() async {
+      if (await getTaskById(task.id) == null) {
+        await saveTask(task.copyWith(subtasks: const []));
+        for (final subtask in task.subtasks) {
+          await _insertSubtask(subtask);
+        }
+      }
+    });
   }
 
   @override
@@ -211,26 +225,21 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
-  Future<void> addSubtask(String taskId, String title) async {
-    final countQuery = _database.select(_database.subtaskEntries)
-      ..where((tbl) => tbl.taskId.equals(taskId));
-    final existing = await countQuery.get();
-    final newSubtask = Subtask.create(
-      taskId: taskId,
-      title: title,
-      orderIndex: existing.length,
-    );
-    await _database
-        .into(_database.subtaskEntries)
-        .insert(
-          SubtaskEntriesCompanion.insert(
-            id: newSubtask.id,
-            taskId: taskId,
-            title: newSubtask.title,
-            isCompleted: const Value(false),
-            orderIndex: Value(newSubtask.orderIndex),
-          ),
-        );
+  Future<void> addSubtask(String taskId, String title) {
+    return _database.transaction(() async {
+      final entries = _database.subtaskEntries;
+      final query = _database.select(entries)
+        ..where((table) => table.taskId.equals(taskId))
+        ..orderBy([(table) => OrderingTerm.desc(table.orderIndex)])
+        ..limit(1);
+      final last = await query.getSingleOrNull();
+      final subtask = Subtask.create(
+        taskId: taskId,
+        title: title,
+        orderIndex: (last?.orderIndex ?? -1) + 1,
+      );
+      await _insertSubtask(subtask);
+    });
   }
 
   @override
@@ -245,10 +254,57 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
-  Future<void> deleteSubtask(String subtaskId) async {
+  Future<Subtask?> deleteSubtask(String subtaskId) async {
     final query = _database.delete(_database.subtaskEntries)
       ..where((tbl) => tbl.id.equals(subtaskId));
-    await query.go();
+    final deleted = (await query.goAndReturn()).singleOrNull;
+    return deleted == null ? null : _subtaskToDomain(deleted);
+  }
+
+  @override
+  Future<void> restoreSubtask(Subtask subtask) {
+    return _database.transaction(() async {
+      final entries = _database.subtaskEntries;
+      final existing = _database.select(entries)
+        ..where((table) => table.id.equals(subtask.id));
+      if (await existing.getSingleOrNull() != null) return;
+
+      final occupied = _database.select(entries)
+        ..where(
+          (table) =>
+              table.taskId.equals(subtask.taskId) &
+              table.orderIndex.equals(subtask.orderIndex),
+        )
+        ..limit(1);
+      if (await occupied.getSingleOrNull() != null) {
+        final later = _database.update(entries)
+          ..where(
+            (table) =>
+                table.taskId.equals(subtask.taskId) &
+                table.orderIndex.isBiggerOrEqualValue(subtask.orderIndex),
+          );
+        await later.write(
+          SubtaskEntriesCompanion.custom(
+            orderIndex: entries.orderIndex + const Variable<int>(1),
+          ),
+        );
+      }
+      await _insertSubtask(subtask);
+    });
+  }
+
+  Future<void> _insertSubtask(Subtask subtask) async {
+    await _database
+        .into(_database.subtaskEntries)
+        .insert(
+          SubtaskEntriesCompanion.insert(
+            id: subtask.id,
+            taskId: subtask.taskId,
+            title: subtask.title,
+            isCompleted: Value(subtask.isCompleted),
+            orderIndex: Value(subtask.orderIndex),
+          ),
+        );
   }
 
   Task _toDomain(TaskEntry entry, List<Subtask> subtasks) {

@@ -1,4 +1,5 @@
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
+import 'package:focuspilot/features/tasks/domain/models/subtask.dart';
 import 'package:focuspilot/features/tasks/domain/models/task_details.dart';
 
 abstract class TaskRepository {
@@ -15,7 +16,9 @@ abstract class TaskRepository {
   /// Returns false if the task no longer exists.
   Future<bool> updateTaskDetails(String id, TaskDetails details);
 
-  Future<void> deleteTask(String id);
+  Future<Task?> deleteTask(String id);
+
+  Future<void> restoreTask(Task task);
 
   Future<void> toggleTaskCompletion(String id);
 
@@ -25,5 +28,7 @@ abstract class TaskRepository {
 
   Future<void> toggleSubtaskCompletion(String subtaskId);
 
-  Future<void> deleteSubtask(String subtaskId);
+  Future<Subtask?> deleteSubtask(String subtaskId);
+
+  Future<void> restoreSubtask(Subtask subtask);
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:focuspilot/features/tasks/domain/models/subtask.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
 import 'package:focuspilot/features/tasks/domain/models/task_details.dart';
 import 'package:focuspilot/features/tasks/domain/models/task_priority.dart';
@@ -129,18 +130,11 @@ class TasksCubit extends Cubit<TasksState> {
     }
   }
 
-  Future<void> deleteSubtask(String subtaskId) async {
-    try {
-      await _taskRepository.deleteSubtask(subtaskId);
-    } catch (e) {
-      emit(
-        state.copyWith(
-          status: TasksStatus.failure,
-          errorMessage: 'Failed to delete subtask: ${e.toString()}',
-        ),
-      );
-    }
-  }
+  Future<Subtask?> deleteSubtask(String id) =>
+      _taskRepository.deleteSubtask(id);
+
+  Future<void> restoreSubtask(Subtask subtask) =>
+      _taskRepository.restoreSubtask(subtask);
 
   Future<void> toggleTask(String id) async {
     try {
@@ -155,18 +149,9 @@ class TasksCubit extends Cubit<TasksState> {
     }
   }
 
-  Future<void> deleteTask(String id) async {
-    try {
-      await _taskRepository.deleteTask(id);
-    } catch (e) {
-      emit(
-        state.copyWith(
-          status: TasksStatus.failure,
-          errorMessage: 'Failed to delete task: ${e.toString()}',
-        ),
-      );
-    }
-  }
+  Future<Task?> deleteTask(String id) => _taskRepository.deleteTask(id);
+
+  Future<void> restoreTask(Task task) => _taskRepository.restoreTask(task);
 
   void setSearchQuery(String query) {
     emit(state.copyWith(searchQuery: query.trim()));

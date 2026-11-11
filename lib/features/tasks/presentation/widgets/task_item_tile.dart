@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
 import 'package:focuspilot/features/tasks/presentation/widgets/task_priority_chip.dart';
@@ -13,7 +15,7 @@ class TaskItemTile extends StatelessWidget {
 
   final Task task;
   final ValueChanged<bool?> onToggle;
-  final VoidCallback onDelete;
+  final FutureOr<void> Function() onDelete;
   final VoidCallback? onTap;
 
   @override
@@ -32,7 +34,10 @@ class TaskItemTile extends StatelessWidget {
         ),
         child: Icon(Icons.delete_outline, color: theme.colorScheme.onError),
       ),
-      onDismissed: (_) => onDelete(),
+      confirmDismiss: (_) async {
+        await onDelete();
+        return false; // The task stream removes the row after the delete commits.
+      },
       child: Card(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         elevation: 0,
