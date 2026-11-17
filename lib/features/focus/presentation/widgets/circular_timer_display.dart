@@ -12,6 +12,7 @@ class CircularTimerDisplay extends StatelessWidget {
     required this.mode,
     this.linkedTask,
     this.isOvertime = false,
+    this.diameter = 260,
   });
 
   final String timerString;
@@ -19,6 +20,7 @@ class CircularTimerDisplay extends StatelessWidget {
   final FocusMode mode;
   final Task? linkedTask;
   final bool isOvertime;
+  final double diameter;
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +44,7 @@ class CircularTimerDisplay extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final size = math.min(260 * textScale, constraints.maxWidth);
+        final size = math.min(diameter * textScale, constraints.maxWidth);
         return SizedBox(
           width: size,
           height: size,

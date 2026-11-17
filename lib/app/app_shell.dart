@@ -60,6 +60,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final sessionActive = context.select(
+      (FocusBloc bloc) => bloc.state.isSessionActive,
+    );
+    final showFullScreenTimer = _selectedIndex == 2 && sessionActive;
     final screens = [
       TodayScreen(
         onNavigateToFocus: _navigateToFocus,
@@ -71,43 +75,47 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('FocusPilot'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Settings',
-            onPressed: () => SettingsSheet.show(context),
-          ),
-        ],
-      ),
+      appBar: showFullScreenTimer
+          ? null
+          : AppBar(
+              title: const Text('FocusPilot'),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.settings_outlined),
+                  tooltip: 'Settings',
+                  onPressed: () => SettingsSheet.show(context),
+                ),
+              ],
+            ),
       body: screens[_selectedIndex],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: _onDestinationSelected,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.today_outlined),
-            selectedIcon: Icon(Icons.today),
-            label: 'Today',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.task_alt_outlined),
-            selectedIcon: Icon(Icons.task_alt),
-            label: 'Tasks',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.timer_outlined),
-            selectedIcon: Icon(Icons.timer),
-            label: 'Focus',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.calendar_month_outlined),
-            selectedIcon: Icon(Icons.calendar_month),
-            label: 'Planner',
-          ),
-        ],
-      ),
+      bottomNavigationBar: showFullScreenTimer
+          ? null
+          : NavigationBar(
+              selectedIndex: _selectedIndex,
+              onDestinationSelected: _onDestinationSelected,
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.today_outlined),
+                  selectedIcon: Icon(Icons.today),
+                  label: 'Today',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.task_alt_outlined),
+                  selectedIcon: Icon(Icons.task_alt),
+                  label: 'Tasks',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.timer_outlined),
+                  selectedIcon: Icon(Icons.timer),
+                  label: 'Focus',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.calendar_month_outlined),
+                  selectedIcon: Icon(Icons.calendar_month),
+                  label: 'Planner',
+                ),
+              ],
+            ),
     );
   }
 }
