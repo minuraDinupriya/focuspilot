@@ -51,6 +51,7 @@ class FocusState extends Equatable {
   bool get isSaving => status == FocusStatus.saving;
   bool get isCompleted => status == FocusStatus.completed;
   bool get isOvertime => overtimeSeconds != null;
+  bool get isSessionActive => isRunning || isPaused || isSaving;
 
   FocusState copyWith({
     FocusStatus? status,

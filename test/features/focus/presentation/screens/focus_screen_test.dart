@@ -113,18 +113,8 @@ void main() {
         expect(find.text('Pause'), findsOneWidget);
         expect(find.byTooltip('Reset timer'), findsNothing);
         expect(find.byTooltip('Skip cycle'), findsNothing);
-        expect(
-          tester
-              .widget<FocusModeSelector>(find.byType(FocusModeSelector))
-              .enabled,
-          isFalse,
-        );
-        expect(
-          tester
-              .widget<ActionChip>(find.widgetWithText(ActionChip, 'Tag a Task'))
-              .onPressed,
-          isNull,
-        );
+        expect(find.byType(FocusModeSelector), findsNothing);
+        expect(find.text('Tag a Task'), findsNothing);
 
         final finish = find.text(label);
         await tester.ensureVisible(finish);

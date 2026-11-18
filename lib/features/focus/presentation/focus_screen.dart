@@ -41,12 +41,12 @@ class FocusScreen extends StatelessWidget {
         },
         builder: (context, state) {
           final bloc = context.read<FocusBloc>();
-          final canChangeTask = !state.isOvertime && !state.isSaving;
-          return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
+          final sessionActive = state.isSessionActive;
+          final content = Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (!sessionActive) ...[
                 // Today's completed sessions pill
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -83,87 +83,127 @@ class FocusScreen extends StatelessWidget {
                 // Mode Selector
                 FocusModeSelector(
                   selectedMode: state.mode,
-                  enabled: canChangeTask && !state.isRunning,
                   onModeSelected: (mode) {
                     bloc.add(FocusModeChanged(mode: mode));
                   },
                 ),
                 const SizedBox(height: 36),
+              ],
 
-                // Circular Timer Display
-                CircularTimerDisplay(
-                  timerString: state.timerString,
-                  progress: state.progress,
-                  mode: state.mode,
-                  linkedTask: state.linkedTask,
-                  isOvertime: state.isOvertime,
-                ),
-                if (state.isOvertime && !state.isSaving) ...[
-                  const SizedBox(height: 16),
-                  _FlowTimeMessage(state: state),
-                ],
-                const SizedBox(height: 24),
+              // Circular Timer Display
+              CircularTimerDisplay(
+                timerString: state.timerString,
+                progress: state.progress,
+                mode: state.mode,
+                linkedTask: state.linkedTask,
+                isOvertime: state.isOvertime,
+                diameter: sessionActive ? 320 : 260,
+              ),
+              if (state.isOvertime && !state.isSaving) ...[
+                const SizedBox(height: 16),
+                _FlowTimeMessage(state: state),
+              ],
+              const SizedBox(height: 24),
 
-                // Link task chip
+              if (!sessionActive) ...[
                 FocusTaskSelector(
                   linkedTask: state.linkedTask,
-                  enabled: canChangeTask,
                   onTaskSelected: (task) {
                     bloc.add(FocusTaskLinked(task: task));
                   },
                 ),
                 const SizedBox(height: 36),
+              ],
 
-                // Controls
-                TimerControls(
-                  state: state,
-                  onStart: () {
-                    bloc.add(
-                      FocusStarted(durationSeconds: state.totalDurationSeconds),
-                    );
-                  },
-                  onPause: () {
-                    bloc.add(const FocusPaused());
-                  },
-                  onResume: () {
-                    bloc.add(const FocusResumed());
-                  },
-                  onReset: () {
-                    bloc.add(const FocusReset());
-                  },
-                  onSkip: () {
-                    bloc.add(const FocusSkipped());
-                  },
-                  onFinishOvertime: (includeOvertime) {
-                    bloc.add(
-                      FocusOvertimeFinished(includeOvertime: includeOvertime),
-                    );
+              // Controls
+              TimerControls(
+                state: state,
+                onStart: () {
+                  bloc.add(
+                    FocusStarted(durationSeconds: state.totalDurationSeconds),
+                  );
+                },
+                onPause: () {
+                  bloc.add(const FocusPaused());
+                },
+                onResume: () {
+                  bloc.add(const FocusResumed());
+                },
+                onReset: () {
+                  bloc.add(const FocusReset());
+                },
+                onSkip: () {
+                  bloc.add(const FocusSkipped());
+                },
+                onFinishOvertime: (includeOvertime) {
+                  bloc.add(
+                    FocusOvertimeFinished(includeOvertime: includeOvertime),
+                  );
+                },
+              ),
+              if (state.isRunning || state.isPaused) ...[
+                const SizedBox(height: 20),
+                ActionChip(
+                  avatar: Icon(
+                    Icons.bolt,
+                    size: 18,
+                    color: state.distractionCount > 0
+                        ? theme.colorScheme.error
+                        : theme.colorScheme.primary,
+                  ),
+                  label: Text(
+                    'Distractions: ${state.distractionCount} (+1)',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  tooltip: 'Tap to log an interruption during this session',
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    bloc.add(const FocusDistractionRecorded());
                   },
                 ),
-                if (state.isRunning || state.isPaused) ...[
-                  const SizedBox(height: 20),
-                  ActionChip(
-                    avatar: Icon(
-                      Icons.bolt,
-                      size: 18,
-                      color: state.distractionCount > 0
-                          ? theme.colorScheme.error
-                          : theme.colorScheme.primary,
+              ],
+            ],
+          );
+          if (!sessionActive) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              child: SizedBox(width: double.infinity, child: content),
+            );
+          }
+
+          final colors = theme.colorScheme;
+          return DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                radius: 0.85,
+                colors: [
+                  Color.alphaBlend(
+                    colors.primary.withValues(alpha: 0.08),
+                    colors.surface,
+                  ),
+                  colors.surface,
+                ],
+              ),
+            ),
+            child: SafeArea(
+              minimum: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: LayoutBuilder(
+                builder: (context, constraints) => SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
                     ),
-                    label: Text(
-                      'Distractions: ${state.distractionCount} (+1)',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 480),
+                        child: content,
                       ),
                     ),
-                    tooltip: 'Tap to log an interruption during this session',
-                    onPressed: () {
-                      HapticFeedback.selectionClick();
-                      bloc.add(const FocusDistractionRecorded());
-                    },
                   ),
-                ],
-              ],
+                ),
+              ),
             ),
           );
         },
