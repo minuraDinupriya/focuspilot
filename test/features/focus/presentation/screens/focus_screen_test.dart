@@ -97,6 +97,57 @@ void main() {
   }
 
   group('FocusScreen', () {
+    for (final (status, overtime) in [
+      (FocusStatus.running, null),
+      (FocusStatus.paused, null),
+      (FocusStatus.running, 83),
+    ]) {
+      testWidgets('full task title wraps in $status with overtime $overtime', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(320, 640);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final task = Task.create(
+          title:
+              'Review database transactions and prepare the interview examples',
+        );
+        final bloc = FocusBloc(
+          ticker: const TestTicker(),
+          sessionRepository: focusRepository,
+          initialState: FocusState(
+            status: status,
+            linkedTask: task,
+            overtimeSeconds: overtime,
+          ),
+        );
+        addTearDown(bloc.close);
+        await tester.pumpWidget(createWidgetUnderTest(bloc));
+        await tester.pumpAndSettle();
+
+        final title = find.text(task.title);
+        expect(title, findsOneWidget);
+        final text = tester.widget<Text>(title);
+        expect(text.maxLines, isNull);
+        expect(text.overflow, isNull);
+        final titleRect = tester.getRect(title);
+        final timerRect = tester.getRect(find.byType(CircularTimerDisplay));
+        expect(titleRect.top, greaterThan(timerRect.bottom));
+        expect(titleRect.left, greaterThanOrEqualTo(20));
+        expect(titleRect.right, lessThanOrEqualTo(300));
+        expect(titleRect.height, greaterThan(48));
+        final controls = find.text(
+          status == FocusStatus.paused ? 'Resume' : 'Pause',
+        );
+        await tester.ensureVisible(controls);
+        expect(controls.hitTestable(), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
+
     for (final (label, savedSeconds) in [
       ('Finish focus', 1583),
       ('Log planned time only', 1500),

@@ -95,10 +95,18 @@ class FocusScreen extends StatelessWidget {
                 timerString: state.timerString,
                 progress: state.progress,
                 mode: state.mode,
-                linkedTask: state.linkedTask,
+                linkedTask: sessionActive ? null : state.linkedTask,
                 isOvertime: state.isOvertime,
                 diameter: sessionActive ? 320 : 260,
               ),
+              if (sessionActive && state.linkedTask != null) ...[
+                const SizedBox(height: 20),
+                Text(
+                  state.linkedTask!.title,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleMedium,
+                ),
+              ],
               if (state.isOvertime && !state.isSaving) ...[
                 const SizedBox(height: 16),
                 _FlowTimeMessage(state: state),
