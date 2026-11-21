@@ -17,6 +17,7 @@ class FocusModeSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AdaptiveSegmentedButton<FocusMode>(
+      alignment: Alignment.center,
       segments: const [
         ButtonSegment<FocusMode>(
           value: FocusMode.work,

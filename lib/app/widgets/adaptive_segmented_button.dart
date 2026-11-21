@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Stacks segments when their labels need more room, including at large text sizes.
+/// Keeps horizontal choices compact and stacks them when space is limited.
 class AdaptiveSegmentedButton<T> extends StatelessWidget {
   const AdaptiveSegmentedButton({
     super.key,
@@ -8,6 +8,7 @@ class AdaptiveSegmentedButton<T> extends StatelessWidget {
     required this.selected,
     required this.onSelectionChanged,
     this.horizontalMinWidth = 400,
+    this.alignment = AlignmentDirectional.centerStart,
     this.buttonKey,
   });
 
@@ -15,6 +16,7 @@ class AdaptiveSegmentedButton<T> extends StatelessWidget {
   final Set<T> selected;
   final ValueChanged<Set<T>>? onSelectionChanged;
   final double horizontalMinWidth;
+  final AlignmentGeometry alignment;
   final Key? buttonKey;
 
   @override
@@ -24,22 +26,29 @@ class AdaptiveSegmentedButton<T> extends StatelessWidget {
         final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
         final isVertical =
             constraints.maxWidth < horizontalMinWidth * textScale;
-        return SizedBox(
-          width: constraints.hasBoundedWidth ? constraints.maxWidth : null,
-          child: SegmentedButton<T>(
-            key: buttonKey,
-            direction: isVertical ? Axis.vertical : Axis.horizontal,
-            style: isVertical
-                ? SegmentedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  )
-                : null,
-            segments: segments,
-            selected: selected,
-            onSelectionChanged: onSelectionChanged,
-          ),
+        final button = SegmentedButton<T>(
+          key: buttonKey,
+          direction: isVertical ? Axis.vertical : Axis.horizontal,
+          style: isVertical
+              ? SegmentedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                )
+              : null,
+          segments: segments,
+          selected: selected,
+          onSelectionChanged: onSelectionChanged,
+        );
+        return Align(
+          alignment: alignment,
+          heightFactor: 1,
+          child: isVertical
+              ? SizedBox(width: constraints.maxWidth, child: button)
+              : ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: 480 * textScale),
+                  child: button,
+                ),
         );
       },
     );

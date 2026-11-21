@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:focuspilot/app/widgets/page_content.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
 import 'package:focuspilot/features/tasks/presentation/controllers/tasks_cubit.dart';
 import 'package:focuspilot/features/tasks/presentation/controllers/tasks_state.dart';
@@ -34,7 +35,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final dateLabel = MaterialLocalizations.of(context).formatMediumDate(_day);
-    return Scaffold(
+    final page = Scaffold(
       body: BlocBuilder<TasksCubit, TasksState>(
         builder: (context, state) {
           final scheduled =
@@ -61,11 +62,14 @@ class _PlannerScreenState extends State<PlannerScreen> {
                     onPressed: () => _moveDay(-1),
                     icon: const Icon(Icons.chevron_left),
                   ),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _chooseDay,
-                      icon: const Icon(Icons.calendar_month_outlined),
-                      label: Text(dateLabel, textAlign: TextAlign.center),
+                  Flexible(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 280),
+                      child: OutlinedButton.icon(
+                        onPressed: _chooseDay,
+                        icon: const Icon(Icons.calendar_month_outlined),
+                        label: Text(dateLabel, textAlign: TextAlign.center),
+                      ),
                     ),
                   ),
                   IconButton(
@@ -122,6 +126,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
         label: const Text('Plan task'),
       ),
     );
+    return PageContent(maxWidth: 840, child: page);
   }
 }
 

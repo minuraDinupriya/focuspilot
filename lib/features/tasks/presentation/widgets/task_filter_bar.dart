@@ -47,6 +47,7 @@ class TaskFilterBar extends StatelessWidget {
 
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Primary Status SegmentedButton
         Padding(
