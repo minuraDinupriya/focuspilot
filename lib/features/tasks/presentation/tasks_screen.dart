@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:focuspilot/app/widgets/page_content.dart';
 import 'package:focuspilot/features/tasks/presentation/controllers/tasks_cubit.dart';
 import 'package:focuspilot/features/tasks/presentation/controllers/tasks_state.dart';
 import 'package:focuspilot/features/tasks/presentation/widgets/task_delete_undo.dart';
@@ -14,7 +15,7 @@ class TasksScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
+    final page = Scaffold(
       body: BlocConsumer<TasksCubit, TasksState>(
         listener: (context, state) {
           if (state.status == TasksStatus.failure &&
@@ -59,6 +60,7 @@ class TasksScreen extends StatelessWidget {
 
           final visibleTasks = state.filteredTasks;
           return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Search Bar
               Padding(
@@ -187,5 +189,6 @@ class TasksScreen extends StatelessWidget {
         label: const Text('Add Task'),
       ),
     );
+    return PageContent(maxWidth: 840, child: page);
   }
 }

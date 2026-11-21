@@ -18,10 +18,14 @@ import 'package:focuspilot/features/settings/presentation/widgets/settings_sheet
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
 import 'package:focuspilot/features/tasks/domain/models/task_priority.dart';
 import 'package:focuspilot/features/tasks/presentation/controllers/tasks_cubit.dart';
+import 'package:focuspilot/features/tasks/presentation/controllers/tasks_state.dart';
+import 'package:focuspilot/features/tasks/presentation/planner_screen.dart';
 import 'package:focuspilot/features/tasks/presentation/tasks_screen.dart';
 import 'package:focuspilot/features/tasks/presentation/widgets/task_detail_sheet.dart';
 import 'package:focuspilot/features/today/presentation/controllers/today_cubit.dart';
 import 'package:focuspilot/features/today/presentation/today_screen.dart';
+import 'package:focuspilot/features/today/presentation/widgets/daily_goal_ring.dart';
+import 'package:focuspilot/features/today/presentation/widgets/metric_cards_row.dart';
 import 'package:focuspilot/features/today/presentation/widgets/productivity_insights_card.dart';
 import 'package:focuspilot/features/today/presentation/widgets/weekly_review_sheet.dart';
 
@@ -125,23 +129,25 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: dark ? ThemeMode.dark : ThemeMode.light,
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context)
-              .copyWith(textScaler: TextScaler.linear(scale)),
-          child: child!,
-        ),
-        home: MultiBlocProvider(
-          providers: [
-            BlocProvider.value(value: tasksCubit),
-            BlocProvider.value(value: settingsCubit),
-            BlocProvider.value(value: todayCubit),
-            BlocProvider.value(value: focusBloc),
-          ],
-          child: Scaffold(body: child),
+      BlocProvider.value(
+        value: settingsCubit,
+        child: MaterialApp(
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: dark ? ThemeMode.dark : ThemeMode.light,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: TextScaler.linear(scale)),
+            child: child!,
+          ),
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider.value(value: tasksCubit),
+              BlocProvider.value(value: todayCubit),
+              BlocProvider.value(value: focusBloc),
+            ],
+            child: Scaffold(body: child),
+          ),
         ),
       ),
     );
@@ -224,6 +230,124 @@ void main() {
       });
     }
   }
+
+  testWidgets('wide Focus choices are compact, centered, and selectable', (
+    tester,
+  ) async {
+    await initialize();
+    await pumpPage(tester, const FocusScreen(), width: 1600, dark: true);
+
+    final modeChoices = find.byType(SegmentedButton<FocusMode>);
+    final bounds = tester.getRect(modeChoices);
+    expect(bounds.width, lessThan(520));
+    expect(bounds.center.dx, closeTo(800, 1));
+    expect(
+      tester.widget<SegmentedButton<FocusMode>>(modeChoices).direction,
+      Axis.horizontal,
+    );
+    await tester.tap(find.text('Short (5m)'));
+    await tester.pumpAndSettle();
+    expect(focusBloc.state.mode, FocusMode.shortBreak);
+    expect(find.text('05:00'), findsOneWidget);
+  });
+
+  testWidgets('wide Today groups the summary and keeps insight tabs compact', (
+    tester,
+  ) async {
+    await initialize();
+    await pumpPage(tester, const TodayScreen(), width: 1600);
+
+    final goal = tester.getRect(find.byType(DailyGoalRing));
+    final metrics = tester.getRect(find.byType(MetricCardsRow));
+    expect(goal.right, lessThan(metrics.left));
+    expect(goal.center.dy, closeTo(metrics.center.dy, 1));
+    final insights = find.byType(ProductivityInsightsCard);
+    final panel = tester.getRect(insights);
+    expect(panel.width, lessThanOrEqualTo(1040));
+    expect(panel.center.dx, closeTo(800, 1));
+    final insightChoices = find.byType(SegmentedButton<InsightTab>);
+    expect(tester.getSize(insightChoices).width, lessThan(520));
+    await tester.ensureVisible(insightChoices);
+    await tester.tap(find.text('Top Tasks'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<SegmentedButton<InsightTab>>(insightChoices).selected,
+      {InsightTab.topTasks},
+    );
+  });
+
+  testWidgets('wide Tasks keeps search, filters, and add action together', (
+    tester,
+  ) async {
+    await initialize();
+    await pumpPage(tester, const TasksScreen(), width: 1600);
+
+    final search = tester.getRect(find.byType(TextField));
+    final filters = find.byType(SegmentedButton<TasksFilter>);
+    final filterBounds = tester.getRect(filters);
+    final addTask = tester.getRect(find.byType(FloatingActionButton));
+    expect(search.center.dx, closeTo(800, 1));
+    expect(search.width, lessThanOrEqualTo(840));
+    expect(filterBounds.left, closeTo(search.left, 1));
+    expect(filterBounds.width, lessThan(520));
+    expect(addTask.right, lessThanOrEqualTo(search.right + 1));
+    await tester.tap(find.text('Active (1)'));
+    await tester.pumpAndSettle();
+    expect(tasksCubit.state.filter, TasksFilter.active);
+  });
+
+  for (final (width, scale) in [(320.0, 2.0), (1600.0, 1.0)]) {
+    testWidgets('Planner date controls fit at ${width.toInt()}px', (
+      tester,
+    ) async {
+      await initialize();
+      await pumpPage(tester, const PlannerScreen(), width: width, scale: scale);
+
+      final date = find.ancestor(
+        of: find.byIcon(Icons.calendar_month_outlined),
+        matching: find.byWidgetPredicate((widget) => widget is OutlinedButton),
+      );
+      final dateBounds = tester.getRect(date);
+      final next = find.byTooltip('Next day');
+      final nextBounds = tester.getRect(next);
+      expect(dateBounds.width, lessThanOrEqualTo(280));
+      expect(nextBounds.left - dateBounds.right, lessThanOrEqualTo(8));
+      expect(nextBounds.right, lessThan(width));
+      if (width == 1600) {
+        expect(nextBounds.right, lessThan(800));
+        expect(
+          tester.getRect(find.byType(FloatingActionButton)).right,
+          lessThanOrEqualTo(1220),
+        );
+      }
+      await tester.tap(next);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('wide navigation and Settings keep choices grouped', (
+    tester,
+  ) async {
+    await initialize();
+    await pumpPage(tester, const AppShell(), width: 1600);
+    final navigation = tester.getRect(find.byType(NavigationBar));
+    expect(navigation.width, lessThanOrEqualTo(640));
+    expect(navigation.center.dx, closeTo(800, 1));
+    expect(navigation.height, lessThan(100));
+
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
+    final sheet = tester.getRect(find.byType(SettingsSheet));
+    final themeChoices = find.byKey(const Key('theme_mode_segmented_button'));
+    expect(sheet.width, lessThanOrEqualTo(640));
+    expect(sheet.center.dx, closeTo(800, 1));
+    expect(tester.getSize(themeChoices).width, lessThan(480));
+    await tester.ensureVisible(themeChoices);
+    await tester.tap(find.text('Dark'));
+    await tester.pumpAndSettle();
+    expect(settingsCubit.state.settings.themeMode.name, 'dark');
+  });
 
   for (final page in [const TodayScreen(), const FocusScreen()]) {
     testWidgets('${page.runtimeType} fits narrow dark mode with large text', (

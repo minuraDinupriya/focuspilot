@@ -332,26 +332,23 @@ class SettingsSheet extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: AdaptiveSegmentedButton<AppThemeMode>(
-                  buttonKey: const Key('theme_mode_segmented_button'),
-                  segments: AppThemeMode.values.map((mode) {
-                    return ButtonSegment<AppThemeMode>(
-                      value: mode,
-                      label: Text(mode.displayName),
-                      icon: Icon(mode.icon, size: 18),
+              AdaptiveSegmentedButton<AppThemeMode>(
+                buttonKey: const Key('theme_mode_segmented_button'),
+                segments: AppThemeMode.values.map((mode) {
+                  return ButtonSegment<AppThemeMode>(
+                    value: mode,
+                    label: Text(mode.displayName),
+                    icon: Icon(mode.icon, size: 18),
+                  );
+                }).toList(),
+                selected: {settings.themeMode},
+                onSelectionChanged: (selected) {
+                  if (selected.isNotEmpty) {
+                    context.read<SettingsCubit>().updateThemeMode(
+                      selected.first,
                     );
-                  }).toList(),
-                  selected: {settings.themeMode},
-                  onSelectionChanged: (selected) {
-                    if (selected.isNotEmpty) {
-                      context.read<SettingsCubit>().updateThemeMode(
-                        selected.first,
-                      );
-                    }
-                  },
-                ),
+                  }
+                },
               ),
               const SizedBox(height: 16),
             ],

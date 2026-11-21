@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:focuspilot/app/widgets/page_content.dart';
 import 'package:focuspilot/features/focus/domain/models/focus_mode.dart';
 import 'package:focuspilot/features/focus/presentation/controllers/focus_bloc.dart';
 import 'package:focuspilot/features/focus/presentation/controllers/focus_event.dart';
@@ -187,7 +188,7 @@ class FocusScreen extends StatelessWidget {
           if (!sessionActive) {
             return SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              child: SizedBox(width: double.infinity, child: content),
+              child: PageContent(maxWidth: 600, child: content),
             );
           }
 
