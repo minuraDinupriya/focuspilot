@@ -11,6 +11,7 @@
 FocusPilot is an **offline-first productivity app** built with Flutter, Dart, and Material 3. It combines task planning, Pomodoro and Flow Time sessions, and productivity insights. Tasks, settings, and focus history are stored locally, and the app requires no account.
 
 Try the Android demo from the [latest GitHub release](https://github.com/minuraDinupriya/focuspilot/releases/latest).
+The Windows desktop baseline uses the same task, planner, focus, analytics, and settings screens. See [Run and build on Windows](#run-and-build-on-windows).
 
 ---
 
@@ -73,7 +74,7 @@ lib/
 │   │   └── presentation/            # TasksCubit, TaskItemTile, AddTaskBottomSheet, TaskFilterBar
 │   └── settings/                    # User Configuration Feature Module
 │       ├── domain/                  # UserSettings entity & SettingsRepository contract
-│       ├── data/                    # InMemorySettingsRepository
+│       ├── data/                    # SQLite settings, with an in-memory repository for tests
 │       └── presentation/            # SettingsCubit & SettingsSheet modal
 ```
 
@@ -93,7 +94,7 @@ lib/
 | **State Management** | **`flutter_bloc` (BLoC & Cubit)** | Predictable, event-driven state machine for the timer; lightweight Cubits for CRUD features. |
 | **Local Database** | **`drift` (SQLite)** | Compile-time type-safe relational SQL queries with reactive stream listeners. |
 | **Value Equality** | **`equatable`** | Structural equality comparisons for states and domain entities without code generation. |
-| **Feedback Engine** | **`audioplayers` & `HapticFeedback`** | Tactile and audible reinforcement when focus intervals complete. |
+| **Feedback Engine** | **Flutter platform services** | System sound and haptic feedback on supported devices. |
 | **Client Identifiers** | **`uuid`** | Generates v4 UUIDs client-side, enabling conflict-free offline item creation. |
 | **CI / CD Pipeline** | **GitHub Actions** | Automated formatting, static analysis, coverage generation, and cloud APK release compilation. |
 
@@ -104,7 +105,7 @@ lib/
 FocusPilot adheres to strict production test standards verified both locally and via automated CI:
 
 * **Unit Tests:** Pure Dart tests validating business logic, ticker countdown streams, repository contracts, and state transitions.
-* **Database Integration Tests:** In-memory SQLite tests validating schema constraints, queries, and stream updates.
+* **Database Integration Tests:** In-memory SQLite tests validate schema and queries. File-backed tests reopen the database and verify saved tasks, settings, and focus sessions.
 * **Widget & Navigation Tests:** Full widget rendering, bottom sheet interactions, tap gestures, and screen navigation.
 
 ```bash
@@ -145,10 +146,26 @@ flutter test --coverage
    dart run build_runner build --delete-conflicting-outputs
    ```
 
-4. **Run on connected device / emulator:**
+4. **Run on a connected Android device or emulator:**
    ```bash
    flutter run
    ```
+
+### Run and build on Windows
+
+Install [Visual Studio with the Desktop development with C++ workload](https://docs.flutter.dev/platform-integration/windows/setup). Run `flutter doctor -v` to verify the toolchain. If Flutter reports that plugin symlinks are unavailable, enable Developer Mode in Windows Settings and rerun the build.
+
+```powershell
+flutter pub get --enforce-lockfile
+flutter run -d windows
+flutter build windows --release
+```
+
+Launch `focuspilot.exe` from `build/windows/x64/runner/Release/`. Keep the entire folder together, including the DLLs and `data` directory.
+
+New Windows installations store `focuspilot.sqlite` under `%APPDATA%\Minura Dinupriya\FocusPilot`. If an earlier desktop build already created the database in your Windows Documents folder, FocusPilot keeps using that file in place. Windows and Android each store their data locally.
+
+For a smoke test, create a scheduled task and subtask, link the task to Focus, complete and save a session, and change the theme. Close and reopen FocusPilot, then check the task, planner, focus history, and theme.
 
 ---
 
@@ -161,6 +178,7 @@ FocusPilot follows modern Agile / Scrum engineering practices:
   * Enforces `dart format` compliance.
   * Enforces zero-warning `flutter analyze`.
   * Runs the test suite and uploads `lcov.info` as a coverage artifact.
+  * Builds a Windows x64 release bundle and uploads it as a workflow artifact.
 * **Automated CD Release Pipeline (`.github/workflows/flutter_cd.yml`):**
   * Pushing a version tag that matches `pubspec.yaml` builds the Android demo and publishes the APK and SHA-256 checksum on GitHub Releases.
 * **PR Templates:** Structured checklist requiring Jira ticket links, manual testing verification, and test coverage validation prior to merging.
