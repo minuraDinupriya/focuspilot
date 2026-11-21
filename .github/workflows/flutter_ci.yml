@@ -11,8 +11,18 @@ permissions:
 
 jobs:
   flutter-checks:
-    name: Format, Analyze & Test (with Coverage)
-    runs-on: ubuntu-latest
+    name: ${{ matrix.check }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            check: Format, Analyze & Test (with Coverage)
+            coverage-artifact: code-coverage-report
+          - os: windows-latest
+            check: Windows Tests & Release Build
+            coverage-artifact: code-coverage-report-windows
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout repository
@@ -39,5 +49,17 @@ jobs:
       - name: Upload code coverage artifact
         uses: actions/upload-artifact@v4
         with:
-          name: code-coverage-report
+          name: ${{ matrix.coverage-artifact }}
           path: coverage/lcov.info
+
+      - name: Build Windows desktop
+        if: runner.os == 'Windows'
+        run: flutter build windows --release
+
+      - name: Upload Windows build bundle
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: focuspilot-windows-x64
+          path: build/windows/x64/runner/Release/
+          if-no-files-found: error
