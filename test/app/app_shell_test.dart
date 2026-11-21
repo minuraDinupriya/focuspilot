@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focuspilot/app/app.dart';
+import 'package:focuspilot/features/focus/presentation/widgets/mini_timer_view.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
 
 import '../features/focus/fakes/fake_focus_session_repository.dart';
@@ -104,7 +106,84 @@ void main() {
       expect(find.text('Start Focus'), findsOneWidget);
       expect(find.text('25:00'), findsOneWidget);
       expect(find.text('Good day!'), findsNothing);
+      expect(find.text('Keep on top'), findsNothing);
     });
+
+    testWidgets('Windows mini timer restores the same paused session', (
+      tester,
+    ) async {
+      const channel = MethodChannel('focuspilot/mini_timer');
+      final messenger = tester.binding.defaultBinaryMessenger;
+      final calls = <bool>[];
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        expect(call.method, 'setEnabled');
+        calls.add(call.arguments as bool);
+        tester.view.physicalSize = calls.last
+            ? const Size(350, 260)
+            : const Size(1000, 800);
+        return null;
+      });
+      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1000, 800);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await pumpAppShell(tester);
+      await tester.tap(find.widgetWithText(NavigationDestination, 'Focus'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Start Focus'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Keep on top'));
+      await tester.pumpAndSettle();
+      expect(find.byType(MiniTimerView), findsOneWidget);
+      expect(find.byType(NavigationBar), findsNothing);
+
+      await tester.ensureVisible(find.text('Pause'));
+      await tester.tap(find.text('Pause'));
+      await tester.pumpAndSettle();
+      final pausedTime = tester
+          .widget<MiniTimerView>(find.byType(MiniTimerView))
+          .state
+          .timerString;
+      expect(find.text('Resume'), findsOneWidget);
+
+      final restore = find.byTooltip('Restore main window');
+      await tester.ensureVisible(restore);
+      await tester.tap(restore);
+      await tester.pumpAndSettle();
+      expect(calls, [true, false]);
+      expect(find.byType(MiniTimerView), findsNothing);
+      expect(find.text(pausedTime), findsOneWidget);
+      expect(find.text('Resume'), findsOneWidget);
+
+      await tester.tap(find.text('Resume'));
+      await tester.pumpAndSettle();
+      expect(find.text('Pause'), findsOneWidget);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+
+    testWidgets('failed Windows pin keeps the normal timer usable', (
+      tester,
+    ) async {
+      const channel = MethodChannel('focuspilot/mini_timer');
+      final messenger = tester.binding.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(channel, (_) async {
+        throw PlatformException(code: 'window_change_failed');
+      });
+      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+
+      await pumpAppShell(tester);
+      await tester.tap(find.widgetWithText(NavigationDestination, 'Focus'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Keep on top'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MiniTimerView), findsNothing);
+      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.text('Start Focus'), findsOneWidget);
+      expect(find.text('Couldn’t open the mini timer.'), findsOneWidget);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
 
     testWidgets(
       'focus timer fills the app until reset, including while paused',
