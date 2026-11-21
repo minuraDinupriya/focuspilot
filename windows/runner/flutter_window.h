@@ -5,6 +5,7 @@
 #include <flutter/flutter_view_controller.h>
 
 #include <memory>
+#include <optional>
 
 #include "win32_window.h"
 
@@ -23,11 +24,19 @@ class FlutterWindow : public Win32Window {
                          LPARAM const lparam) noexcept override;
 
  private:
+  struct SavedWindowState {
+    WINDOWPLACEMENT placement{};
+    bool topmost = false;
+  };
+
+  bool SetMiniTimerEnabled(bool enabled);
+
   // The project to run.
   flutter::DartProject project_;
 
   // The Flutter instance hosted by this window.
   std::unique_ptr<flutter::FlutterViewController> flutter_controller_;
+  std::optional<SavedWindowState> window_before_mini_timer_;
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

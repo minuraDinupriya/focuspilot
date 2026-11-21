@@ -8,10 +8,20 @@ import 'package:focuspilot/features/focus/presentation/controllers/focus_state.d
 import 'package:focuspilot/features/focus/presentation/widgets/circular_timer_display.dart';
 import 'package:focuspilot/features/focus/presentation/widgets/focus_mode_selector.dart';
 import 'package:focuspilot/features/focus/presentation/widgets/focus_task_selector.dart';
+import 'package:focuspilot/features/focus/presentation/widgets/mini_timer_view.dart';
 import 'package:focuspilot/features/focus/presentation/widgets/timer_controls.dart';
 
 class FocusScreen extends StatelessWidget {
-  const FocusScreen({super.key});
+  const FocusScreen({
+    super.key,
+    this.isMiniTimer = false,
+    this.onOpenMiniTimer,
+    this.onRestoreWindow,
+  });
+
+  final bool isMiniTimer;
+  final VoidCallback? onOpenMiniTimer;
+  final VoidCallback? onRestoreWindow;
 
   @override
   Widget build(BuildContext context) {
@@ -41,11 +51,36 @@ class FocusScreen extends StatelessWidget {
         },
         builder: (context, state) {
           final bloc = context.read<FocusBloc>();
+          final controls = TimerControls(
+            state: state,
+            onStart: () => bloc.add(
+              FocusStarted(durationSeconds: state.totalDurationSeconds),
+            ),
+            onPause: () => bloc.add(const FocusPaused()),
+            onResume: () => bloc.add(const FocusResumed()),
+            onReset: () => bloc.add(const FocusReset()),
+            onSkip: () => bloc.add(const FocusSkipped()),
+            onFinishOvertime: (includeOvertime) => bloc.add(
+              FocusOvertimeFinished(includeOvertime: includeOvertime),
+            ),
+          );
+          if (isMiniTimer) {
+            return MiniTimerView(
+              state: state,
+              controls: controls,
+              onRestore: onRestoreWindow,
+            );
+          }
+
           final sessionActive = state.isSessionActive;
           final content = Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              if (onOpenMiniTimer != null) ...[
+                KeepOnTopButton(onPressed: onOpenMiniTimer),
+                const SizedBox(height: 12),
+              ],
               if (!sessionActive) ...[
                 // Today's completed sessions pill
                 Container(
@@ -123,32 +158,7 @@ class FocusScreen extends StatelessWidget {
                 const SizedBox(height: 36),
               ],
 
-              // Controls
-              TimerControls(
-                state: state,
-                onStart: () {
-                  bloc.add(
-                    FocusStarted(durationSeconds: state.totalDurationSeconds),
-                  );
-                },
-                onPause: () {
-                  bloc.add(const FocusPaused());
-                },
-                onResume: () {
-                  bloc.add(const FocusResumed());
-                },
-                onReset: () {
-                  bloc.add(const FocusReset());
-                },
-                onSkip: () {
-                  bloc.add(const FocusSkipped());
-                },
-                onFinishOvertime: (includeOvertime) {
-                  bloc.add(
-                    FocusOvertimeFinished(includeOvertime: includeOvertime),
-                  );
-                },
-              ),
+              controls,
               if (state.isRunning || state.isPaused) ...[
                 const SizedBox(height: 20),
                 ActionChip(

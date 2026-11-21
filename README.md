@@ -163,6 +163,8 @@ flutter build windows --release
 
 Launch `focuspilot.exe` from `build/windows/x64/runner/Release/`. Keep the entire folder together, including the DLLs and `data` directory.
 
+On the Focus tab, select **Keep on top** to switch to a compact timer that stays above ordinary Windows apps. Drag it by the title bar to move it. Select **Restore main window** to return to the regular layout with the same session. Minimizing hides the timer and lets it continue. Closing the window exits FocusPilot.
+
 New Windows installations store `focuspilot.sqlite` under `%APPDATA%\Minura Dinupriya\FocusPilot`. If an earlier desktop build already created the database in your Windows Documents folder, FocusPilot keeps using that file in place. Windows and Android each store their data locally.
 
 For a smoke test, create a scheduled task and subtask, link the task to Focus, complete and save a session, and change the theme. Close and reopen FocusPilot, then check the task, planner, focus history, and theme.

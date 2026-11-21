@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:focuspilot/features/focus/presentation/controllers/focus_bloc.dart';
 import 'package:focuspilot/features/focus/presentation/controllers/focus_event.dart';
 import 'package:focuspilot/features/focus/presentation/focus_screen.dart';
+import 'package:focuspilot/features/focus/presentation/mini_timer_window.dart';
+import 'package:focuspilot/features/focus/presentation/widgets/mini_timer_view.dart';
 import 'package:focuspilot/features/settings/presentation/widgets/settings_sheet.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
 import 'package:focuspilot/features/tasks/presentation/planner_screen.dart';
@@ -17,7 +20,11 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
+  static const _focusIndex = 2;
+  static const _miniTimerWindow = MiniTimerWindow();
   int _selectedIndex = 0;
+  bool _miniTimerEnabled = false;
+  bool _changingWindow = false;
 
   @override
   void initState() {
@@ -46,7 +53,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
 
   void _navigateToFocus() {
     setState(() {
-      _selectedIndex = 2; // Index of Focus tab
+      _selectedIndex = _focusIndex;
     });
   }
 
@@ -58,28 +65,71 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _navigateToFocus();
   }
 
+  Future<void> _setMiniTimerEnabled(bool enabled) async {
+    if (_changingWindow || _miniTimerEnabled == enabled) return;
+
+    _changingWindow = true;
+    try {
+      await _miniTimerWindow.setEnabled(enabled);
+      if (!mounted) return;
+      setState(() {
+        _miniTimerEnabled = enabled;
+        if (enabled) _selectedIndex = _focusIndex;
+      });
+    } on PlatformException {
+      _showWindowError(enabled);
+    } on MissingPluginException {
+      _showWindowError(enabled);
+    } finally {
+      _changingWindow = false;
+    }
+  }
+
+  void _showWindowError(bool enabling) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          enabling
+              ? 'Couldn’t open the mini timer.'
+              : 'Couldn’t restore the main window.',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final sessionActive = context.select(
       (FocusBloc bloc) => bloc.state.isSessionActive,
     );
-    final showFullScreenTimer = _selectedIndex == 2 && sessionActive;
+    final isFocusTab = _selectedIndex == _focusIndex;
+    final hideNavigation = isFocusTab && (sessionActive || _miniTimerEnabled);
+    final canOpenMiniTimer = isFocusTab && _miniTimerWindow.isSupported;
     final screens = [
       TodayScreen(
         onNavigateToFocus: _navigateToFocus,
         onFocusTask: _onFocusTask,
       ),
       const TasksScreen(),
-      const FocusScreen(),
+      FocusScreen(
+        isMiniTimer: _miniTimerEnabled,
+        onOpenMiniTimer: canOpenMiniTimer && sessionActive
+            ? () => _setMiniTimerEnabled(true)
+            : null,
+        onRestoreWindow: () => _setMiniTimerEnabled(false),
+      ),
       const PlannerScreen(),
     ];
 
     return Scaffold(
-      appBar: showFullScreenTimer
+      appBar: hideNavigation
           ? null
           : AppBar(
               title: const Text('FocusPilot'),
               actions: [
+                if (canOpenMiniTimer)
+                  KeepOnTopButton(onPressed: () => _setMiniTimerEnabled(true)),
                 IconButton(
                   icon: const Icon(Icons.settings_outlined),
                   tooltip: 'Settings',
@@ -88,7 +138,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
               ],
             ),
       body: screens[_selectedIndex],
-      bottomNavigationBar: showFullScreenTimer
+      bottomNavigationBar: hideNavigation
           ? null
           : NavigationBar(
               selectedIndex: _selectedIndex,
