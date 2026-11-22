@@ -21,10 +21,13 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     this.settingsRepository,
     this.taskRepository,
     DateTime Function()? now,
+    this._elapsedTime,
+    this._onIntervalEnded,
     FocusState? initialState,
   }) : now = now ?? DateTime.now,
        super(initialState ?? const FocusState()) {
     on<FocusStarted>(_onStarted);
+    on<FocusQuickStarted>(_onQuickStarted);
     on<FocusTicked>(_onTicked);
     on<FocusPaused>(_onPaused);
     on<FocusResumed>(_onResumed);
@@ -52,6 +55,11 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
   final SettingsRepository? settingsRepository;
   final TaskRepository? taskRepository;
   final DateTime Function() now;
+  final Duration Function()? _elapsedTime;
+  final void Function(FocusMode mode)? _onIntervalEnded;
+  Duration? _elapsedDeadline;
+  // The signed time to the deadline is frozen during pause, including Flow Time.
+  Duration? _pausedInterval;
   StreamSubscription<void>? _tickerSubscription;
   StreamSubscription<UserSettings>? _settingsSubscription;
   UserSettings _settings = const UserSettings();
@@ -102,7 +110,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     emit(
       next.copyWith(
         status: FocusStatus.running,
-        targetEndTime: now().add(Duration(seconds: seconds)),
+        targetEndTime: _anchorInterval(Duration(seconds: seconds)),
       ),
     );
     _startTicker(countdownSeconds: seconds);
@@ -120,18 +128,43 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     );
   }
 
-  int _remainingSeconds(DateTime deadline, DateTime current) {
-    final remaining = deadline.difference(current).inMicroseconds;
+  void _onQuickStarted(FocusQuickStarted event, Emitter<FocusState> emit) {
+    if (state.isSessionActive) return;
+    _startCountdown(emit, _readyState(state, FocusMode.work));
+  }
+
+  DateTime _anchorInterval(Duration untilDeadline) {
+    final elapsed = _elapsedTime?.call();
+    _elapsedDeadline = elapsed == null ? null : elapsed + untilDeadline;
+    _pausedInterval = null;
+    return now().add(untilDeadline);
+  }
+
+  // The elapsed clock drives timing when available. Calendar timestamps are
+  // still used when saving a session in the user's history.
+  Duration? _timeUntilDeadline(DateTime current) {
+    final elapsedDeadline = _elapsedDeadline;
+    return elapsedDeadline == null
+        ? state.targetEndTime?.difference(current)
+        : elapsedDeadline - _elapsedTime!();
+  }
+
+  void _clearDeadline({Duration? pausedInterval}) {
+    _pausedInterval = _elapsedDeadline == null ? null : pausedInterval;
+    _elapsedDeadline = null;
+  }
+
+  int _remainingSeconds(Duration untilDeadline) {
+    final remaining = untilDeadline.inMicroseconds;
     const microsPerSecond = Duration.microsecondsPerSecond;
     return math.max(0, (remaining + microsPerSecond - 1) ~/ microsPerSecond);
   }
 
-  int _overtimeAt(DateTime current) {
+  int _overtimeAt(Duration? untilDeadline) {
     final displayed = state.overtimeSeconds ?? 0;
-    final start = state.targetEndTime;
-    return start == null
+    return untilDeadline == null
         ? displayed
-        : math.max(displayed, current.difference(start).inSeconds);
+        : math.max(displayed, (-untilDeadline).inSeconds);
   }
 
   Future<void> _onTicked(FocusTicked event, Emitter<FocusState> emit) {
@@ -155,62 +188,72 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     if (!state.isRunning) return;
 
     final current = now();
-    final deadline = state.targetEndTime;
-    if (state.isOvertime || deadline == null || current.isBefore(deadline)) {
-      final remaining = deadline == null || state.isOvertime
+    final untilDeadline = _timeUntilDeadline(current);
+    if (state.isOvertime ||
+        untilDeadline == null ||
+        untilDeadline > Duration.zero) {
+      final remaining = untilDeadline == null || state.isOvertime
           ? state.durationSeconds
-          : _remainingSeconds(deadline, current);
-      if (pause) _stopTicker();
+          : _remainingSeconds(untilDeadline);
+      if (pause) {
+        _stopTicker();
+        _clearDeadline(pausedInterval: untilDeadline);
+      }
       emit(
         state.copyWith(
           status: pause ? FocusStatus.paused : FocusStatus.running,
           durationSeconds: remaining,
-          overtimeSeconds: state.isOvertime ? _overtimeAt(current) : null,
+          overtimeSeconds: state.isOvertime ? _overtimeAt(untilDeadline) : null,
           clearTargetEndTime: pause,
         ),
       );
       if (!pause &&
           !state.isOvertime &&
           lastCountdownTick &&
-          deadline != null) {
-        // The countdown stream can finish early after a clock adjustment.
+          untilDeadline != null) {
+        // The ticker can finish before the deadline after a clock adjustment
+        // or when a paused countdown resumes with fractional seconds.
         _startTicker(countdownSeconds: remaining);
       }
       return;
     }
 
+    final completedAt = _elapsedDeadline == null
+        ? state.targetEndTime!
+        : current.add(untilDeadline);
     if (state.mode == FocusMode.work) {
-      await _beginOvertime(emit, deadline, current, pause: pause);
+      await _beginOvertime(emit, completedAt, untilDeadline, pause: pause);
     } else {
-      await _completeBreak(emit);
+      await _completeBreak(emit, completedAt);
     }
   }
 
   Future<void> _beginOvertime(
     Emitter<FocusState> emit,
-    DateTime deadline,
-    DateTime current, {
+    DateTime completedAt,
+    Duration untilDeadline, {
     required bool pause,
   }) async {
     final checkpoint = FocusSession.create(
       mode: FocusMode.work,
       durationSeconds: state.totalDurationSeconds,
-      completedAt: deadline,
+      completedAt: completedAt,
       taskId: state.linkedTask?.id,
       distractionCount: state.distractionCount,
     );
     _workCheckpoint = checkpoint;
     _stopTicker();
+    if (pause) _clearDeadline(pausedInterval: untilDeadline);
     emit(
       state.copyWith(
         status: pause ? FocusStatus.paused : FocusStatus.running,
         durationSeconds: 0,
-        overtimeSeconds: current.difference(deadline).inSeconds,
+        overtimeSeconds: (-untilDeadline).inSeconds,
         clearTargetEndTime: pause,
       ),
     );
     if (!pause) _startTicker();
-    _signalIntervalEnded();
+    _signalIntervalEnded(checkpoint.mode);
 
     final save = _recordSession(checkpoint);
     _checkpointSave = save;
@@ -234,7 +277,8 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     final checkpoint = _workCheckpoint;
     if (checkpoint == null || state.isSaving) return;
 
-    final overtime = _overtimeAt(now());
+    final untilDeadline = _timeUntilDeadline(now());
+    final overtime = _overtimeAt(untilDeadline);
     final session = FocusSession(
       id: checkpoint.id,
       mode: checkpoint.mode,
@@ -247,6 +291,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
           : checkpoint.distractionCount,
     );
     _stopTicker();
+    if (state.isRunning) _clearDeadline(pausedInterval: untilDeadline);
     emit(
       state.copyWith(
         status: FocusStatus.saving,
@@ -282,8 +327,10 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     if (state.isOvertime || state.isSaving) return;
 
     final current = now();
-    final deadline = state.targetEndTime;
-    if (state.isRunning && deadline != null && !current.isBefore(deadline)) {
+    final untilDeadline = _timeUntilDeadline(current);
+    if (state.isRunning &&
+        untilDeadline != null &&
+        untilDeadline <= Duration.zero) {
       await _reconcileClock(emit);
       return;
     }
@@ -294,11 +341,12 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
       return;
     }
 
-    final remaining = deadline == null
+    final remaining = untilDeadline == null
         ? state.durationSeconds
-        : _remainingSeconds(deadline, current);
+        : _remainingSeconds(untilDeadline);
     final elapsed = state.totalDurationSeconds - remaining;
     if (elapsed > 0) {
+      _clearDeadline();
       emit(
         state.copyWith(status: FocusStatus.saving, clearTargetEndTime: true),
       );
@@ -319,18 +367,22 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     }
   }
 
-  Future<void> _completeBreak(Emitter<FocusState> emit) async {
+  Future<void> _completeBreak(
+    Emitter<FocusState> emit,
+    DateTime completedAt,
+  ) async {
     _stopTicker();
+    _clearDeadline();
     final session = FocusSession.create(
       mode: state.mode,
       durationSeconds: state.totalDurationSeconds,
-      completedAt: now(),
+      completedAt: completedAt,
       taskId: state.linkedTask?.id,
       distractionCount: state.distractionCount,
     );
     emit(state.copyWith(status: FocusStatus.saving, clearTargetEndTime: true));
     await _recordSession(session);
-    _signalIntervalEnded();
+    _signalIntervalEnded(session.mode);
 
     if (_settings.autoStartNextSession) {
       _moveToNextTimer(emit, state);
@@ -358,10 +410,15 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     }
   }
 
-  void _signalIntervalEnded() {
+  void _signalIntervalEnded(FocusMode mode) {
     if (_settings.hapticEnabled) unawaited(HapticFeedback.vibrate());
     if (_settings.soundEnabled) {
       unawaited(SystemSound.play(SystemSoundType.alert));
+    }
+    try {
+      _onIntervalEnded?.call(mode);
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
     }
   }
 
@@ -373,6 +430,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     if (_settings.autoStartNextSession) {
       _startCountdown(emit, next);
     } else {
+      _clearDeadline();
       emit(next);
     }
   }
@@ -380,14 +438,19 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
   void _onResumed(FocusResumed event, Emitter<FocusState> emit) {
     if (!state.isPaused) return;
 
-    final target = now().add(
-      Duration(
-        seconds: state.isOvertime
-            ? -state.overtimeSeconds!
-            : state.durationSeconds,
+    final untilDeadline =
+        _pausedInterval ??
+        Duration(
+          seconds: state.isOvertime
+              ? -state.overtimeSeconds!
+              : state.durationSeconds,
+        );
+    emit(
+      state.copyWith(
+        status: FocusStatus.running,
+        targetEndTime: _anchorInterval(untilDeadline),
       ),
     );
-    emit(state.copyWith(status: FocusStatus.running, targetEndTime: target));
     _startTicker(
       countdownSeconds: state.isOvertime ? null : state.durationSeconds,
     );
@@ -396,12 +459,14 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
   void _onReset(FocusReset event, Emitter<FocusState> emit) {
     if (state.isOvertime || state.isSaving) return;
     _stopTicker();
+    _clearDeadline();
     emit(_readyState(state, state.mode));
   }
 
   void _onModeChanged(FocusModeChanged event, Emitter<FocusState> emit) {
     if (state.isOvertime || state.isSaving) return;
     _stopTicker();
+    _clearDeadline();
     emit(_readyState(state, event.mode));
   }
 
@@ -410,11 +475,11 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     Emitter<FocusState> emit,
   ) async {
     if (state.isOvertime || state.isSaving) return;
-    final deadline = state.targetEndTime;
+    final untilDeadline = _timeUntilDeadline(now());
     if (state.isRunning &&
         state.mode == FocusMode.work &&
-        deadline != null &&
-        !now().isBefore(deadline)) {
+        untilDeadline != null &&
+        untilDeadline <= Duration.zero) {
       await _reconcileClock(emit);
       return;
     }
