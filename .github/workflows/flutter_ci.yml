@@ -56,10 +56,15 @@ jobs:
         if: runner.os == 'Windows'
         run: flutter build windows --release
 
+      - name: Package Windows desktop
+        if: runner.os == 'Windows'
+        run: ./scripts/package-windows.ps1
+
       - name: Upload Windows build bundle
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: focuspilot-windows-x64
-          path: build/windows/x64/runner/Release/
+          path: build/distribution/
+          compression-level: 0
           if-no-files-found: error

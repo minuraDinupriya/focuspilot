@@ -22,11 +22,15 @@ class MiniTimerView extends StatelessWidget {
     required this.state,
     required this.controls,
     required this.onRestore,
+    this.onHideToTray,
+    this.onCapture,
   });
 
   final FocusState state;
   final Widget controls;
   final VoidCallback? onRestore;
+  final VoidCallback? onHideToTray;
+  final VoidCallback? onCapture;
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +59,18 @@ class MiniTimerView extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (onCapture != null)
+                      IconButton(
+                        onPressed: onCapture,
+                        icon: const Icon(Icons.edit_note_outlined),
+                        tooltip: 'Note a distraction',
+                      ),
+                    if (onHideToTray != null)
+                      IconButton(
+                        onPressed: onHideToTray,
+                        icon: const Icon(Icons.move_to_inbox_outlined),
+                        tooltip: 'Minimize to tray',
+                      ),
                     IconButton(
                       onPressed: onRestore,
                       icon: const Icon(Icons.open_in_full),

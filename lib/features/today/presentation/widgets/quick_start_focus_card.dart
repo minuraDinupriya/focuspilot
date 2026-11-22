@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 
 class QuickStartFocusCard extends StatelessWidget {
-  const QuickStartFocusCard({super.key, required this.onStartPressed});
+  const QuickStartFocusCard({
+    super.key,
+    required this.onStartPressed,
+    required this.workDurationMinutes,
+    required this.sessionActive,
+  });
 
   final VoidCallback onStartPressed;
+  final int workDurationMinutes;
+  final bool sessionActive;
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +41,7 @@ class QuickStartFocusCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Ready to focus?',
+                  sessionActive ? 'Timer in progress' : 'Ready to focus?',
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: theme.colorScheme.onPrimary,
                     fontWeight: FontWeight.bold,
@@ -42,7 +49,9 @@ class QuickStartFocusCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Kick off a 25-minute Pomodoro session now.',
+                  sessionActive
+                      ? 'Return to the current session.'
+                      : 'Start a $workDurationMinutes-minute focus session.',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onPrimary.withValues(alpha: 0.85),
                   ),
@@ -62,9 +71,9 @@ class QuickStartFocusCard extends StatelessWidget {
             ),
             onPressed: onStartPressed,
             icon: const Icon(Icons.play_arrow_rounded, size: 20),
-            label: const Text(
-              'Start',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            label: Text(
+              sessionActive ? 'Open timer' : 'Start',
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
         ],

@@ -7,6 +7,7 @@ import 'package:focuspilot/features/focus/presentation/controllers/focus_bloc.da
 import 'package:focuspilot/features/focus/presentation/controllers/focus_event.dart';
 import 'package:focuspilot/features/focus/presentation/controllers/focus_state.dart';
 import 'package:focuspilot/features/focus/presentation/widgets/circular_timer_display.dart';
+import 'package:focuspilot/features/focus/presentation/widgets/distraction_notes.dart';
 import 'package:focuspilot/features/focus/presentation/widgets/focus_mode_selector.dart';
 import 'package:focuspilot/features/focus/presentation/widgets/focus_task_selector.dart';
 import 'package:focuspilot/features/focus/presentation/widgets/mini_timer_view.dart';
@@ -18,11 +19,17 @@ class FocusScreen extends StatelessWidget {
     this.isMiniTimer = false,
     this.onOpenMiniTimer,
     this.onRestoreWindow,
+    this.onHideToTray,
+    this.onToggleNavigation,
+    this.navigationVisible = false,
   });
 
   final bool isMiniTimer;
   final VoidCallback? onOpenMiniTimer;
   final VoidCallback? onRestoreWindow;
+  final VoidCallback? onHideToTray;
+  final VoidCallback? onToggleNavigation;
+  final bool navigationVisible;
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +59,23 @@ class FocusScreen extends StatelessWidget {
         },
         builder: (context, state) {
           final bloc = context.read<FocusBloc>();
+          final hasNotes = DistractionNotes.isAvailable(context);
+          final canCapture = hasNotes && (state.isRunning || state.isPaused);
+          Future<void> captureNote() async {
+            final saved = await DistractionNotes.showCapture(
+              context,
+              taskTitle: state.linkedTask?.title,
+            );
+            // An automatically started interval can replace the original one
+            // while the dialog is open. Attribute a note only to its interval.
+            if (saved &&
+                context.mounted &&
+                bloc.state.mode == state.mode &&
+                bloc.state.targetEndTime == state.targetEndTime) {
+              bloc.add(const FocusDistractionRecorded());
+            }
+          }
+
           final controls = TimerControls(
             state: state,
             onStart: () => bloc.add(
@@ -70,6 +94,8 @@ class FocusScreen extends StatelessWidget {
               state: state,
               controls: controls,
               onRestore: onRestoreWindow,
+              onHideToTray: onHideToTray,
+              onCapture: canCapture ? captureNote : null,
             );
           }
 
@@ -78,8 +104,37 @@ class FocusScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              if (onOpenMiniTimer != null) ...[
-                KeepOnTopButton(onPressed: onOpenMiniTimer),
+              if (onOpenMiniTimer != null ||
+                  onToggleNavigation != null ||
+                  onHideToTray != null) ...[
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    if (onOpenMiniTimer != null)
+                      KeepOnTopButton(onPressed: onOpenMiniTimer),
+                    if (onToggleNavigation != null)
+                      TextButton.icon(
+                        onPressed: onToggleNavigation,
+                        icon: Icon(
+                          navigationVisible
+                              ? Icons.visibility_off_outlined
+                              : Icons.menu_open,
+                        ),
+                        label: Text(
+                          navigationVisible
+                              ? 'Hide navigation'
+                              : 'Show navigation',
+                        ),
+                      ),
+                    if (onHideToTray != null)
+                      IconButton(
+                        icon: const Icon(Icons.move_to_inbox_outlined),
+                        tooltip: 'Minimize to tray',
+                        onPressed: onHideToTray,
+                      ),
+                  ],
+                ),
                 const SizedBox(height: 12),
               ],
               if (!sessionActive) ...[
@@ -160,6 +215,12 @@ class FocusScreen extends StatelessWidget {
               ],
 
               controls,
+              if (hasNotes && !sessionActive)
+                TextButton.icon(
+                  onPressed: () => DistractionNotes.showHistory(context),
+                  icon: const Icon(Icons.notes_outlined),
+                  label: const Text('Distraction notes'),
+                ),
               if (state.isRunning || state.isPaused) ...[
                 const SizedBox(height: 20),
                 ActionChip(
@@ -182,6 +243,12 @@ class FocusScreen extends StatelessWidget {
                     bloc.add(const FocusDistractionRecorded());
                   },
                 ),
+                if (canCapture)
+                  TextButton.icon(
+                    onPressed: captureNote,
+                    icon: const Icon(Icons.edit_note_outlined),
+                    label: const Text('Note a distraction'),
+                  ),
               ],
             ],
           );

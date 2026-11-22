@@ -11,7 +11,9 @@
 FocusPilot is an **offline-first productivity app** built with Flutter, Dart, and Material 3. It combines task planning, Pomodoro and Flow Time sessions, and productivity insights. Tasks, settings, and focus history are stored locally, and the app requires no account.
 
 Try the Android demo from the [latest GitHub release](https://github.com/minuraDinupriya/focuspilot/releases/latest).
-The Windows desktop baseline uses the same task, planner, focus, analytics, and settings screens. See [Run and build on Windows](#run-and-build-on-windows).
+Windows adds a responsive sidebar, a pinned mini timer, tray controls and interval notifications. See [Run and build on Windows](#run-and-build-on-windows).
+
+![FocusPilot on Windows with the Focus tab open](docs/assets/windows-desktop.jpg)
 
 ---
 
@@ -165,6 +167,17 @@ Launch `focuspilot.exe` from `build/windows/x64/runner/Release/`. Keep the entir
 
 On the Focus tab, select **Keep on top** to switch to a compact timer that stays above ordinary Windows apps. Drag it by the title bar to move it. Select **Restore main window** to return to the regular layout with the same session. Minimizing hides the timer and lets it continue. Closing the window exits FocusPilot.
 
+**Minimize to tray** keeps the session running in the notification area. Right-click its icon to pause, resume, reopen, or exit. Windows notification settings control whether interval alerts appear. Start a configured session directly from the Dashboard. During a session, choose **Note a distraction** to save a thought locally. Open **Distraction notes** from the idle Focus tab to read it later.
+
+| Windows shortcut | Action |
+| --- | --- |
+| Ctrl+N | Create a task |
+| Ctrl+Shift+F | Start, pause or resume focus |
+| Ctrl+Shift+M | Toggle the mini timer |
+| Ctrl+Alt+Shift+P | Restore from the tray when the shortcut is available |
+
+Run `./scripts/package-windows.ps1` after the release build to generate the Windows ZIP and SHA-256 checksum in `build/distribution`. To install a packaged release, extract the entire ZIP and open `focuspilot.exe`. Install the [Microsoft Visual C++ x64 runtime](https://aka.ms/vc14/vc_redist.x64.exe) if required. Use `Get-FileHash focuspilot-windows-x64.zip` to compare the download with the supplied checksum.
+
 New Windows installations store `focuspilot.sqlite` under `%APPDATA%\Minura Dinupriya\FocusPilot`. If an earlier desktop build already created the database in your Windows Documents folder, FocusPilot keeps using that file in place. Windows and Android each store their data locally.
 
 For a smoke test, create a scheduled task and subtask, link the task to Focus, complete and save a session, and change the theme. Close and reopen FocusPilot, then check the task, planner, focus history, and theme.
@@ -173,7 +186,7 @@ For a smoke test, create a scheduled task and subtask, link the task to Focus, c
 
 ## 🔄 DevOps, CI & Automated Continuous Delivery (CD)
 
-FocusPilot follows modern Agile / Scrum engineering practices:
+The repository uses the following build and release workflow.
 
 * **Trunk-Based Git Workflow:** Short-lived feature branches (`feature/FOC-<id>-<description>`) merged into `main` via Pull Requests.
 * **Automated CI Quality Gate (`.github/workflows/flutter_ci.yml`):**
@@ -182,5 +195,5 @@ FocusPilot follows modern Agile / Scrum engineering practices:
   * Runs the test suite and uploads `lcov.info` as a coverage artifact.
   * Builds a Windows x64 release bundle and uploads it as a workflow artifact.
 * **Automated CD Release Pipeline (`.github/workflows/flutter_cd.yml`):**
-  * Pushing a version tag that matches `pubspec.yaml` builds the Android demo and publishes the APK and SHA-256 checksum on GitHub Releases.
+  * A version tag matching `pubspec.yaml` builds the Android demo APK and Windows x64 ZIP. The release job verifies both checksums before publishing the four files.
 * **PR Templates:** Structured checklist requiring Jira ticket links, manual testing verification, and test coverage validation prior to merging.

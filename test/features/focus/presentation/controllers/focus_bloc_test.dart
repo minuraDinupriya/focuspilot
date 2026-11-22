@@ -67,6 +67,137 @@ void main() {
   });
 
   group('FocusBloc', () {
+    test(
+      'elapsed deadlines survive wall clock changes and wake-up ticks',
+      () async {
+        var calendar = DateTime(2026, 11, 21, 10);
+        var elapsed = Duration.zero;
+        final ended = <FocusMode>[];
+        final originalTask = Task.create(title: 'Original task');
+        final nextTask = Task.create(title: 'Next task');
+        final testBloc = FocusBloc(
+          ticker: const FakeTicker(),
+          sessionRepository: repository,
+          now: () => calendar,
+          elapsedTime: () => elapsed,
+          onIntervalEnded: ended.add,
+        );
+        addTearDown(testBloc.close);
+
+        testBloc.add(FocusTaskLinked(task: originalTask));
+        await pumpEventQueue();
+        testBloc.add(const FocusStarted(durationSeconds: 300));
+        await pumpEventQueue();
+        calendar = calendar.add(const Duration(hours: 2));
+        elapsed = const Duration(minutes: 1);
+        testBloc.add(const FocusTicked(durationSeconds: 0));
+        await pumpEventQueue();
+        expect(testBloc.state.durationSeconds, 240);
+        expect(await repository.getSessions(), isEmpty);
+
+        calendar = calendar.subtract(const Duration(hours: 3));
+        elapsed = const Duration(seconds: 320);
+        // A task click can reach the bloc before the first tick after waking.
+        testBloc.add(FocusTaskLinked(task: nextTask));
+        testBloc.add(const FocusAppForegrounded());
+        testBloc.add(const FocusTicked(durationSeconds: 0));
+        await pumpEventQueue();
+
+        expect(testBloc.state.overtimeSeconds, 20);
+        expect(testBloc.state.linkedTask, originalTask);
+        expect(ended, [FocusMode.work]);
+        final saved = (await repository.getSessions()).single;
+        expect(saved.taskId, originalTask.id);
+        expect(saved.durationSeconds, 300);
+        expect(
+          saved.completedAt,
+          calendar.subtract(const Duration(seconds: 20)),
+        );
+      },
+    );
+
+    test('elapsed timer pauses with fractional precision', () async {
+      var elapsed = Duration.zero;
+      final testBloc = FocusBloc(
+        ticker: const FakeTicker(),
+        sessionRepository: repository,
+        now: () => DateTime(2026, 11, 21, 10),
+        elapsedTime: () => elapsed,
+      );
+      addTearDown(testBloc.close);
+
+      testBloc.add(const FocusStarted(durationSeconds: 60));
+      await pumpEventQueue();
+      elapsed += const Duration(milliseconds: 250);
+      testBloc.add(const FocusPaused());
+      await pumpEventQueue();
+      expect(testBloc.state.isPaused, isTrue);
+      expect(testBloc.state.durationSeconds, 60);
+
+      elapsed += const Duration(minutes: 5);
+      testBloc.add(const FocusAppForegrounded());
+      await pumpEventQueue();
+      expect(await repository.getSessions(), isEmpty);
+      testBloc.add(const FocusResumed());
+      await pumpEventQueue();
+
+      elapsed += const Duration(milliseconds: 59750);
+      testBloc.add(const FocusAppForegrounded());
+      await pumpEventQueue();
+      expect(testBloc.state.overtimeSeconds, 0);
+      expect((await repository.getSessions()).single.durationSeconds, 60);
+    });
+
+    test(
+      'an early skip stays skipped and a recovered break signals once',
+      () async {
+        var calendar = DateTime(2026, 11, 21, 10);
+        var elapsed = Duration.zero;
+        final ended = <FocusMode>[];
+        final testBloc = FocusBloc(
+          ticker: const FakeTicker(),
+          sessionRepository: repository,
+          now: () => calendar,
+          elapsedTime: () => elapsed,
+          onIntervalEnded: ended.add,
+        );
+        addTearDown(testBloc.close);
+
+        testBloc.add(const FocusStarted(durationSeconds: 300));
+        await pumpEventQueue();
+        elapsed = const Duration(seconds: 30);
+        calendar = calendar.add(const Duration(days: 1));
+        testBloc.add(const FocusSkipped());
+        await pumpEventQueue();
+        final skipped = (await repository.getSessions()).single;
+        expect(skipped.status, SessionStatus.skipped);
+        expect(skipped.durationSeconds, 30);
+        expect(skipped.completedAt, calendar);
+        expect(ended, isEmpty);
+
+        expect(testBloc.state.mode, FocusMode.shortBreak);
+        testBloc.add(const FocusStarted(durationSeconds: 60));
+        await pumpEventQueue();
+        elapsed += const Duration(minutes: 8);
+        calendar = calendar.add(const Duration(minutes: 8));
+        testBloc.add(const FocusAppForegrounded());
+        testBloc.add(const FocusTicked(durationSeconds: 0));
+        await pumpEventQueue();
+
+        expect(testBloc.state.isCompleted, isTrue);
+        expect(ended, [FocusMode.shortBreak]);
+        final sessions = await repository.getSessions();
+        expect(sessions, hasLength(2));
+        expect(sessions.last.status, SessionStatus.completed);
+        expect(sessions.last.durationSeconds, 60);
+        expect(sessions.last.mode, FocusMode.shortBreak);
+        expect(
+          sessions.last.completedAt,
+          calendar.subtract(const Duration(minutes: 7)),
+        );
+      },
+    );
+
     test('initial state has default work values and initial status', () {
       expect(bloc.state.status, FocusStatus.initial);
       expect(bloc.state.mode, FocusMode.work);

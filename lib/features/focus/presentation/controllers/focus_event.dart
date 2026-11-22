@@ -19,6 +19,10 @@ class FocusStarted extends FocusEvent {
   List<Object?> get props => [durationSeconds];
 }
 
+class FocusQuickStarted extends FocusEvent {
+  const FocusQuickStarted();
+}
+
 class FocusPaused extends FocusEvent {
   const FocusPaused();
 }
