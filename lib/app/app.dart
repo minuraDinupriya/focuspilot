@@ -1,9 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:focuspilot/app/app_shell.dart';
+import 'package:focuspilot/app/desktop/desktop_integration.dart';
 import 'package:focuspilot/app/theme/app_theme.dart';
 import 'package:focuspilot/features/focus/data/repositories/focus_session_repository_impl.dart';
+import 'package:focuspilot/features/focus/data/repositories/in_memory_distraction_notes_repository.dart';
+import 'package:focuspilot/features/focus/data/repositories/sqlite_distraction_notes_repository.dart';
+import 'package:focuspilot/features/focus/domain/models/focus_mode.dart';
 import 'package:focuspilot/features/focus/domain/models/ticker.dart';
+import 'package:focuspilot/features/focus/domain/repositories/distraction_notes_repository.dart';
 import 'package:focuspilot/features/focus/domain/repositories/focus_session_repository.dart';
 import 'package:focuspilot/features/focus/presentation/controllers/focus_bloc.dart';
 import 'package:focuspilot/features/settings/data/repositories/in_memory_settings_repository.dart';
@@ -33,7 +41,9 @@ class FocusPilotApp extends StatefulWidget {
 }
 
 class _FocusPilotAppState extends State<FocusPilotApp> {
+  static const _desktop = DesktopIntegration();
   late final AppDatabase _database;
+  late final DistractionNotesRepository _notesRepository;
   late final TaskRepository _taskRepository;
   late final FocusSessionRepository _focusSessionRepository;
   late final SettingsRepository _settingsRepository;
@@ -46,10 +56,12 @@ class _FocusPilotAppState extends State<FocusPilotApp> {
         widget.focusSessionRepository != null) {
       _taskRepository = widget.taskRepository!;
       _focusSessionRepository = widget.focusSessionRepository!;
+      _notesRepository = InMemoryDistractionNotesRepository();
       _settingsRepository =
           widget.settingsRepository ?? InMemorySettingsRepository();
     } else {
       _database = AppDatabase();
+      _notesRepository = SqliteDistractionNotesRepository(_database);
       _taskRepository = widget.taskRepository ?? TaskRepositoryImpl(_database);
       _focusSessionRepository =
           widget.focusSessionRepository ??
@@ -71,10 +83,29 @@ class _FocusPilotAppState extends State<FocusPilotApp> {
     super.dispose();
   }
 
+  Future<void> _notifyIntervalEnded(FocusMode mode) async {
+    final work = mode == FocusMode.work;
+    try {
+      await _desktop.showIntervalEnded(
+        title: work ? 'Focus target reached' : 'Break finished',
+        body: work
+            ? 'Finish when you’re ready to save your Flow Time.'
+            : 'Your next focus session is ready.',
+      );
+    } on PlatformException {
+      // Notification delivery is best effort, independently of session storage.
+    } on MissingPluginException {
+      // The timer can also run in an embedded Flutter view.
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MultiRepositoryProvider(
       providers: [
+        RepositoryProvider<DistractionNotesRepository>.value(
+          value: _notesRepository,
+        ),
         RepositoryProvider<TaskRepository>.value(value: _taskRepository),
         RepositoryProvider<FocusSessionRepository>.value(
           value: _focusSessionRepository,
@@ -99,12 +130,21 @@ class _FocusPilotAppState extends State<FocusPilotApp> {
             create: (context) => TasksCubit(_taskRepository),
           ),
           BlocProvider<FocusBloc>(
-            create: (context) => FocusBloc(
-              ticker: const Ticker(),
-              sessionRepository: _focusSessionRepository,
-              settingsRepository: _settingsRepository,
-              taskRepository: _taskRepository,
-            ),
+            create: (context) {
+              final clock = _desktop.isSupported
+                  ? (Stopwatch()..start())
+                  : null;
+              return FocusBloc(
+                ticker: const Ticker(),
+                sessionRepository: _focusSessionRepository,
+                settingsRepository: _settingsRepository,
+                taskRepository: _taskRepository,
+                elapsedTime: clock == null ? null : () => clock.elapsed,
+                onIntervalEnded: _desktop.isSupported
+                    ? (mode) => unawaited(_notifyIntervalEnded(mode))
+                    : null,
+              );
+            },
           ),
         ],
         child: BlocBuilder<SettingsCubit, SettingsState>(

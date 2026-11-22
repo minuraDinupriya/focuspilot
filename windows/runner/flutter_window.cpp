@@ -77,6 +77,8 @@ bool FlutterWindow::OnCreate() {
   }
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
+  desktop_integration_ = std::make_unique<DesktopIntegration>(
+      GetHandle(), flutter_controller_->engine()->messenger());
 
   flutter::MethodChannel<flutter::EncodableValue> mini_timer_channel(
       flutter_controller_->engine()->messenger(), "focuspilot/mini_timer",
@@ -158,6 +160,7 @@ bool FlutterWindow::SetMiniTimerEnabled(bool enabled) {
 
 void FlutterWindow::OnDestroy() {
   window_before_mini_timer_.reset();
+  desktop_integration_.reset();
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
@@ -169,6 +172,14 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  if (desktop_integration_) {
+    const auto result =
+        desktop_integration_->HandleMessage(message, wparam, lparam);
+    if (result) {
+      return *result;
+    }
+  }
+
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =

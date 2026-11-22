@@ -15,10 +15,20 @@ import 'package:focuspilot/features/today/presentation/widgets/weekly_analytics_
 import 'package:focuspilot/features/today/presentation/widgets/weekly_review_sheet.dart';
 
 class TodayScreen extends StatelessWidget {
-  const TodayScreen({super.key, this.onNavigateToFocus, this.onFocusTask});
+  const TodayScreen({
+    super.key,
+    this.onNavigateToFocus,
+    this.onStartFocus,
+    this.onFocusTask,
+    this.workDurationMinutes = 25,
+    this.sessionActive = false,
+  });
 
   final VoidCallback? onNavigateToFocus;
+  final VoidCallback? onStartFocus;
   final ValueChanged<Task>? onFocusTask;
+  final int workDurationMinutes;
+  final bool sessionActive;
 
   @override
   Widget build(BuildContext context) {
@@ -172,8 +182,12 @@ class TodayScreen extends StatelessWidget {
 
                   // Quick Start Focus CTA Card
                   QuickStartFocusCard(
+                    workDurationMinutes: workDurationMinutes,
+                    sessionActive: sessionActive,
                     onStartPressed: () {
-                      if (onNavigateToFocus != null) {
+                      if (onStartFocus != null) {
+                        onStartFocus!();
+                      } else if (onNavigateToFocus != null) {
                         onNavigateToFocus!();
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(

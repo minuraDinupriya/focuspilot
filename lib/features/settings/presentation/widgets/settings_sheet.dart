@@ -5,7 +5,9 @@ import 'package:focuspilot/features/settings/domain/models/app_theme_mode.dart';
 import 'package:focuspilot/features/settings/presentation/controllers/settings_cubit.dart';
 
 class SettingsSheet extends StatelessWidget {
-  const SettingsSheet({super.key});
+  const SettingsSheet({super.key, this.embedded = false});
+
+  final bool embedded;
 
   static Future<void> show(BuildContext context) {
     return showModalBottomSheet(
@@ -119,17 +121,19 @@ class SettingsSheet extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.outlineVariant,
-                    borderRadius: BorderRadius.circular(2),
+              if (!embedded) ...[
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.outlineVariant,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
+              ],
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -141,10 +145,12 @@ class SettingsSheet extends StatelessWidget {
                       ),
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
+                  if (!embedded)
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      tooltip: 'Close Settings',
+                      onPressed: () => Navigator.pop(context),
+                    ),
                 ],
               ),
               const SizedBox(height: 16),

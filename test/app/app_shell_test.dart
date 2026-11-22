@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focuspilot/app/app.dart';
+import 'package:focuspilot/app/app_shell.dart';
+import 'package:focuspilot/features/focus/domain/models/focus_mode.dart';
+import 'package:focuspilot/features/focus/presentation/controllers/focus_bloc.dart';
 import 'package:focuspilot/features/focus/presentation/widgets/mini_timer_view.dart';
+import 'package:focuspilot/features/settings/data/repositories/in_memory_settings_repository.dart';
+import 'package:focuspilot/features/settings/domain/models/user_settings.dart';
+import 'package:focuspilot/features/settings/presentation/widgets/settings_sheet.dart';
 import 'package:focuspilot/features/tasks/domain/models/task.dart';
 
 import '../features/focus/fakes/fake_focus_session_repository.dart';
@@ -23,13 +30,44 @@ void main() {
       focusRepository.dispose();
     });
 
-    Future<void> pumpAppShell(WidgetTester tester) async {
+    Future<void> pumpAppShell(
+      WidgetTester tester, {
+      UserSettings settings = const UserSettings(),
+    }) async {
+      final settingsRepository = InMemorySettingsRepository(settings);
+      addTearDown(settingsRepository.dispose);
       await tester.pumpWidget(
         FocusPilotApp(
           taskRepository: taskRepository,
           focusSessionRepository: focusRepository,
+          settingsRepository: settingsRepository,
         ),
       );
+      await tester.pumpAndSettle();
+    }
+
+    Finder sidebarDestination(String label) => find.descendant(
+      of: find.byType(NavigationRail),
+      matching: find.text(label),
+    );
+
+    void setWindowSize(WidgetTester tester, Size size) {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = size;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+    }
+
+    Future<void> pressShortcut(
+      WidgetTester tester,
+      LogicalKeyboardKey key, {
+      bool shift = false,
+    }) async {
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      if (shift) await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyEvent(key);
+      if (shift) await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
       await tester.pumpAndSettle();
     }
 
@@ -109,6 +147,170 @@ void main() {
       expect(find.text('Keep on top'), findsNothing);
     });
 
+    testWidgets(
+      'Quick Start uses the saved work duration after selecting a break',
+      (tester) async {
+        await pumpAppShell(
+          tester,
+          settings: const UserSettings(workDurationMinutes: 42),
+        );
+        await tester.tap(find.widgetWithText(NavigationDestination, 'Focus'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Short (5m)'));
+        await tester.pumpAndSettle();
+        expect(find.text('05:00'), findsOneWidget);
+        await tester.tap(find.widgetWithText(NavigationDestination, 'Today'));
+        await tester.pumpAndSettle();
+        expect(find.text('Start a 42-minute focus session.'), findsOneWidget);
+        final start = find.text('Start');
+        await tester.ensureVisible(start);
+        await tester.tap(start);
+        await tester.pumpAndSettle();
+
+        final state = tester
+            .element(find.byType(AppShell))
+            .read<FocusBloc>()
+            .state;
+        expect(state.isRunning, isTrue);
+        expect(state.mode, FocusMode.work);
+        expect(state.totalDurationSeconds, 42 * 60);
+        expect(find.text('Pause'), findsOneWidget);
+        expect(find.byType(NavigationBar), findsNothing);
+      },
+    );
+
+    testWidgets('Windows Dashboard reopens the same paused break', (
+      tester,
+    ) async {
+      setWindowSize(tester, const Size(1200, 800));
+      await pumpAppShell(tester);
+      await tester.tap(sidebarDestination('Focus'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Short (5m)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Start Break'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Pause'));
+      await tester.pumpAndSettle();
+      final bloc = tester.element(find.byType(AppShell)).read<FocusBloc>();
+      final pausedBreak = bloc.state;
+      expect(pausedBreak.isPaused, isTrue);
+      expect(pausedBreak.mode, FocusMode.shortBreak);
+
+      await tester.tap(find.text('Show navigation'));
+      await tester.pumpAndSettle();
+      await tester.tap(sidebarDestination('Dashboard'));
+      await tester.pumpAndSettle();
+      final open = find.text('Open timer');
+      await tester.ensureVisible(open);
+      await tester.tap(open);
+      await tester.pumpAndSettle();
+      expect(find.text('Resume'), findsOneWidget);
+      expect(bloc.state, pausedBreak);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+
+    testWidgets(
+      'Windows Settings stays open across a resize and returns to Planner',
+      (tester) async {
+        setWindowSize(tester, const Size(1200, 800));
+        await pumpAppShell(tester);
+        expect(find.byType(NavigationBar), findsNothing);
+        for (final label in [
+          'Dashboard',
+          'Tasks',
+          'Focus',
+          'Planner',
+          'Settings',
+        ]) {
+          expect(sidebarDestination(label), findsOneWidget);
+        }
+        await tester.tap(sidebarDestination('Planner'));
+        await tester.pumpAndSettle();
+        await tester.tap(sidebarDestination('Settings'));
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<SettingsSheet>(find.byType(SettingsSheet)).embedded,
+          isTrue,
+        );
+        tester.view.physicalSize = const Size(780, 720);
+        await tester.pumpAndSettle();
+        expect(find.byType(NavigationRail), findsNothing);
+        expect(find.byType(SettingsSheet), findsOneWidget);
+        await tester.tap(find.byType(BackButton));
+        await tester.pumpAndSettle();
+        expect(find.byType(NavigationBar), findsOneWidget);
+        expect(find.text('Day Planner'), findsOneWidget);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.windows),
+    );
+
+    testWidgets(
+      'Windows shortcuts control the timer and open the task editor',
+      (tester) async {
+        setWindowSize(tester, const Size(1200, 800));
+        const channel = MethodChannel('focuspilot/mini_timer');
+        final messenger = tester.binding.defaultBinaryMessenger;
+        final pinCalls = <Object?>[];
+        messenger.setMockMethodCallHandler(channel, (call) async {
+          pinCalls.add(call.arguments);
+          return null;
+        });
+        addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+        await pumpAppShell(tester);
+
+        await pressShortcut(tester, LogicalKeyboardKey.keyF, shift: true);
+        expect(find.text('Pause'), findsOneWidget);
+        await pressShortcut(tester, LogicalKeyboardKey.keyF, shift: true);
+        expect(find.text('Resume'), findsOneWidget);
+        await pressShortcut(tester, LogicalKeyboardKey.keyM, shift: true);
+        expect(find.byType(MiniTimerView), findsOneWidget);
+        await pressShortcut(tester, LogicalKeyboardKey.keyN);
+        expect(pinCalls, [true, false]);
+        expect(find.byType(MiniTimerView), findsNothing);
+        expect(find.text('New Task'), findsOneWidget);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.windows),
+    );
+
+    testWidgets('tray commands pause and resume the same hidden timer', (
+      tester,
+    ) async {
+      const channel = MethodChannel('focuspilot/desktop');
+      final messenger = tester.binding.defaultBinaryMessenger;
+      final calls = <MethodCall>[];
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        calls.add(call);
+        return null;
+      });
+      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+      await pumpAppShell(tester);
+      await pressShortcut(tester, LogicalKeyboardKey.keyF, shift: true);
+      await tester.tap(find.byTooltip('Minimize to tray'));
+      await tester.pumpAndSettle();
+      expect(calls.last.method, 'hideToTray');
+      expect(calls[calls.length - 2].arguments['isRunning'], true);
+
+      Future<void> sendNativeCommand(String name) async {
+        await messenger.handlePlatformMessage(
+          channel.name,
+          channel.codec.encodeMethodCall(MethodCall(name)),
+          null,
+        );
+        await tester.pumpAndSettle();
+      }
+
+      await sendNativeCommand('togglePause');
+      final bloc = tester.element(find.byType(AppShell)).read<FocusBloc>();
+      final paused = bloc.state;
+      expect(paused.isPaused, isTrue);
+      expect(calls.last.arguments['isPaused'], true);
+      await sendNativeCommand('shown');
+      expect(bloc.state, paused);
+      await sendNativeCommand('togglePause');
+      expect(bloc.state.isRunning, isTrue);
+      expect(bloc.state.totalDurationSeconds, paused.totalDurationSeconds);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+
     testWidgets('Windows mini timer restores the same paused session', (
       tester,
     ) async {
@@ -124,13 +326,10 @@ void main() {
         return null;
       });
       addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
-      tester.view.devicePixelRatio = 1;
-      tester.view.physicalSize = const Size(1000, 800);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      addTearDown(tester.view.resetPhysicalSize);
+      setWindowSize(tester, const Size(1000, 800));
 
       await pumpAppShell(tester);
-      await tester.tap(find.widgetWithText(NavigationDestination, 'Focus'));
+      await tester.tap(sidebarDestination('Focus'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Start Focus'));
       await tester.pumpAndSettle();
