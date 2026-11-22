@@ -153,7 +153,7 @@ void main() {
                 ?.actualMinutes,
             25,
           );
-          expect(database.schemaVersion, 10);
+          expect(database.schemaVersion, 11);
         } finally {
           await database.close();
         }

@@ -1689,6 +1689,320 @@ class FocusSessionEntriesCompanion extends UpdateCompanion<FocusSessionEntry> {
   }
 }
 
+class $DistractionNoteEntriesTable extends DistractionNoteEntries
+    with TableInfo<$DistractionNoteEntriesTable, DistractionNoteEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DistractionNoteEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bodyMeta = const VerificationMeta('body');
+  @override
+  late final GeneratedColumn<String> body = GeneratedColumn<String>(
+    'body',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(minTextLength: 1),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _capturedAtMeta = const VerificationMeta(
+    'capturedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> capturedAt = GeneratedColumn<DateTime>(
+    'captured_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _taskTitleMeta = const VerificationMeta(
+    'taskTitle',
+  );
+  @override
+  late final GeneratedColumn<String> taskTitle = GeneratedColumn<String>(
+    'task_title',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, body, capturedAt, taskTitle];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'distraction_note_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DistractionNoteEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('body')) {
+      context.handle(
+        _bodyMeta,
+        body.isAcceptableOrUnknown(data['body']!, _bodyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bodyMeta);
+    }
+    if (data.containsKey('captured_at')) {
+      context.handle(
+        _capturedAtMeta,
+        capturedAt.isAcceptableOrUnknown(data['captured_at']!, _capturedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_capturedAtMeta);
+    }
+    if (data.containsKey('task_title')) {
+      context.handle(
+        _taskTitleMeta,
+        taskTitle.isAcceptableOrUnknown(data['task_title']!, _taskTitleMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DistractionNoteEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DistractionNoteEntry(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      body: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body'],
+      )!,
+      capturedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}captured_at'],
+      )!,
+      taskTitle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}task_title'],
+      ),
+    );
+  }
+
+  @override
+  $DistractionNoteEntriesTable createAlias(String alias) {
+    return $DistractionNoteEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class DistractionNoteEntry extends DataClass
+    implements Insertable<DistractionNoteEntry> {
+  final String id;
+  final String body;
+  final DateTime capturedAt;
+  final String? taskTitle;
+  const DistractionNoteEntry({
+    required this.id,
+    required this.body,
+    required this.capturedAt,
+    this.taskTitle,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['body'] = Variable<String>(body);
+    map['captured_at'] = Variable<DateTime>(capturedAt);
+    if (!nullToAbsent || taskTitle != null) {
+      map['task_title'] = Variable<String>(taskTitle);
+    }
+    return map;
+  }
+
+  DistractionNoteEntriesCompanion toCompanion(bool nullToAbsent) {
+    return DistractionNoteEntriesCompanion(
+      id: Value(id),
+      body: Value(body),
+      capturedAt: Value(capturedAt),
+      taskTitle: taskTitle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(taskTitle),
+    );
+  }
+
+  factory DistractionNoteEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DistractionNoteEntry(
+      id: serializer.fromJson<String>(json['id']),
+      body: serializer.fromJson<String>(json['body']),
+      capturedAt: serializer.fromJson<DateTime>(json['capturedAt']),
+      taskTitle: serializer.fromJson<String?>(json['taskTitle']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'body': serializer.toJson<String>(body),
+      'capturedAt': serializer.toJson<DateTime>(capturedAt),
+      'taskTitle': serializer.toJson<String?>(taskTitle),
+    };
+  }
+
+  DistractionNoteEntry copyWith({
+    String? id,
+    String? body,
+    DateTime? capturedAt,
+    Value<String?> taskTitle = const Value.absent(),
+  }) => DistractionNoteEntry(
+    id: id ?? this.id,
+    body: body ?? this.body,
+    capturedAt: capturedAt ?? this.capturedAt,
+    taskTitle: taskTitle.present ? taskTitle.value : this.taskTitle,
+  );
+  DistractionNoteEntry copyWithCompanion(DistractionNoteEntriesCompanion data) {
+    return DistractionNoteEntry(
+      id: data.id.present ? data.id.value : this.id,
+      body: data.body.present ? data.body.value : this.body,
+      capturedAt: data.capturedAt.present
+          ? data.capturedAt.value
+          : this.capturedAt,
+      taskTitle: data.taskTitle.present ? data.taskTitle.value : this.taskTitle,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DistractionNoteEntry(')
+          ..write('id: $id, ')
+          ..write('body: $body, ')
+          ..write('capturedAt: $capturedAt, ')
+          ..write('taskTitle: $taskTitle')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, body, capturedAt, taskTitle);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DistractionNoteEntry &&
+          other.id == this.id &&
+          other.body == this.body &&
+          other.capturedAt == this.capturedAt &&
+          other.taskTitle == this.taskTitle);
+}
+
+class DistractionNoteEntriesCompanion
+    extends UpdateCompanion<DistractionNoteEntry> {
+  final Value<String> id;
+  final Value<String> body;
+  final Value<DateTime> capturedAt;
+  final Value<String?> taskTitle;
+  final Value<int> rowid;
+  const DistractionNoteEntriesCompanion({
+    this.id = const Value.absent(),
+    this.body = const Value.absent(),
+    this.capturedAt = const Value.absent(),
+    this.taskTitle = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DistractionNoteEntriesCompanion.insert({
+    required String id,
+    required String body,
+    required DateTime capturedAt,
+    this.taskTitle = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       body = Value(body),
+       capturedAt = Value(capturedAt);
+  static Insertable<DistractionNoteEntry> custom({
+    Expression<String>? id,
+    Expression<String>? body,
+    Expression<DateTime>? capturedAt,
+    Expression<String>? taskTitle,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (body != null) 'body': body,
+      if (capturedAt != null) 'captured_at': capturedAt,
+      if (taskTitle != null) 'task_title': taskTitle,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DistractionNoteEntriesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? body,
+    Value<DateTime>? capturedAt,
+    Value<String?>? taskTitle,
+    Value<int>? rowid,
+  }) {
+    return DistractionNoteEntriesCompanion(
+      id: id ?? this.id,
+      body: body ?? this.body,
+      capturedAt: capturedAt ?? this.capturedAt,
+      taskTitle: taskTitle ?? this.taskTitle,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (body.present) {
+      map['body'] = Variable<String>(body.value);
+    }
+    if (capturedAt.present) {
+      map['captured_at'] = Variable<DateTime>(capturedAt.value);
+    }
+    if (taskTitle.present) {
+      map['task_title'] = Variable<String>(taskTitle.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DistractionNoteEntriesCompanion(')
+          ..write('id: $id, ')
+          ..write('body: $body, ')
+          ..write('capturedAt: $capturedAt, ')
+          ..write('taskTitle: $taskTitle, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $UserSettingsEntriesTable extends UserSettingsEntries
     with TableInfo<$UserSettingsEntriesTable, UserSettingsEntry> {
   @override
@@ -2927,6 +3241,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SubtaskEntriesTable subtaskEntries = $SubtaskEntriesTable(this);
   late final $FocusSessionEntriesTable focusSessionEntries =
       $FocusSessionEntriesTable(this);
+  late final $DistractionNoteEntriesTable distractionNoteEntries =
+      $DistractionNoteEntriesTable(this);
   late final $UserSettingsEntriesTable userSettingsEntries =
       $UserSettingsEntriesTable(this);
   late final $TimerPresetEntriesTable timerPresetEntries =
@@ -2939,6 +3255,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     taskEntries,
     subtaskEntries,
     focusSessionEntries,
+    distractionNoteEntries,
     userSettingsEntries,
     timerPresetEntries,
   ];
@@ -4039,6 +4356,220 @@ typedef $$FocusSessionEntriesTableProcessedTableManager =
       FocusSessionEntry,
       PrefetchHooks Function()
     >;
+typedef $$DistractionNoteEntriesTableCreateCompanionBuilder =
+    DistractionNoteEntriesCompanion Function({
+      required String id,
+      required String body,
+      required DateTime capturedAt,
+      Value<String?> taskTitle,
+      Value<int> rowid,
+    });
+typedef $$DistractionNoteEntriesTableUpdateCompanionBuilder =
+    DistractionNoteEntriesCompanion Function({
+      Value<String> id,
+      Value<String> body,
+      Value<DateTime> capturedAt,
+      Value<String?> taskTitle,
+      Value<int> rowid,
+    });
+
+class $$DistractionNoteEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $DistractionNoteEntriesTable> {
+  $$DistractionNoteEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get body => $composableBuilder(
+    column: $table.body,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get capturedAt => $composableBuilder(
+    column: $table.capturedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get taskTitle => $composableBuilder(
+    column: $table.taskTitle,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DistractionNoteEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $DistractionNoteEntriesTable> {
+  $$DistractionNoteEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get body => $composableBuilder(
+    column: $table.body,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get capturedAt => $composableBuilder(
+    column: $table.capturedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get taskTitle => $composableBuilder(
+    column: $table.taskTitle,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DistractionNoteEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DistractionNoteEntriesTable> {
+  $$DistractionNoteEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get body =>
+      $composableBuilder(column: $table.body, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get capturedAt => $composableBuilder(
+    column: $table.capturedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get taskTitle =>
+      $composableBuilder(column: $table.taskTitle, builder: (column) => column);
+}
+
+class $$DistractionNoteEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DistractionNoteEntriesTable,
+          DistractionNoteEntry,
+          $$DistractionNoteEntriesTableFilterComposer,
+          $$DistractionNoteEntriesTableOrderingComposer,
+          $$DistractionNoteEntriesTableAnnotationComposer,
+          $$DistractionNoteEntriesTableCreateCompanionBuilder,
+          $$DistractionNoteEntriesTableUpdateCompanionBuilder,
+          (
+            DistractionNoteEntry,
+            BaseReferences<
+              _$AppDatabase,
+              $DistractionNoteEntriesTable,
+              DistractionNoteEntry
+            >,
+          ),
+          DistractionNoteEntry,
+          PrefetchHooks Function()
+        > {
+  $$DistractionNoteEntriesTableTableManager(
+    _$AppDatabase db,
+    $DistractionNoteEntriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DistractionNoteEntriesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$DistractionNoteEntriesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$DistractionNoteEntriesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> body = const Value.absent(),
+                Value<DateTime> capturedAt = const Value.absent(),
+                Value<String?> taskTitle = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DistractionNoteEntriesCompanion(
+                id: id,
+                body: body,
+                capturedAt: capturedAt,
+                taskTitle: taskTitle,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String body,
+                required DateTime capturedAt,
+                Value<String?> taskTitle = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DistractionNoteEntriesCompanion.insert(
+                id: id,
+                body: body,
+                capturedAt: capturedAt,
+                taskTitle: taskTitle,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<
+                    $DistractionNoteEntriesTable,
+                    DistractionNoteEntry
+                  >(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $DistractionNoteEntriesTable,
+                    DistractionNoteEntry
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DistractionNoteEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DistractionNoteEntriesTable,
+      DistractionNoteEntry,
+      $$DistractionNoteEntriesTableFilterComposer,
+      $$DistractionNoteEntriesTableOrderingComposer,
+      $$DistractionNoteEntriesTableAnnotationComposer,
+      $$DistractionNoteEntriesTableCreateCompanionBuilder,
+      $$DistractionNoteEntriesTableUpdateCompanionBuilder,
+      (
+        DistractionNoteEntry,
+        BaseReferences<
+          _$AppDatabase,
+          $DistractionNoteEntriesTable,
+          DistractionNoteEntry
+        >,
+      ),
+      DistractionNoteEntry,
+      PrefetchHooks Function()
+    >;
 typedef $$UserSettingsEntriesTableCreateCompanionBuilder =
     UserSettingsEntriesCompanion Function({
       required String id,
@@ -4678,6 +5209,11 @@ class $AppDatabaseManager {
       $$SubtaskEntriesTableTableManager(_db, _db.subtaskEntries);
   $$FocusSessionEntriesTableTableManager get focusSessionEntries =>
       $$FocusSessionEntriesTableTableManager(_db, _db.focusSessionEntries);
+  $$DistractionNoteEntriesTableTableManager get distractionNoteEntries =>
+      $$DistractionNoteEntriesTableTableManager(
+        _db,
+        _db.distractionNoteEntries,
+      );
   $$UserSettingsEntriesTableTableManager get userSettingsEntries =>
       $$UserSettingsEntriesTableTableManager(_db, _db.userSettingsEntries);
   $$TimerPresetEntriesTableTableManager get timerPresetEntries =>

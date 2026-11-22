@@ -49,6 +49,16 @@ class FocusSessionEntries extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+class DistractionNoteEntries extends Table {
+  TextColumn get id => text()();
+  TextColumn get body => text().withLength(min: 1)();
+  DateTimeColumn get capturedAt => dateTime()();
+  TextColumn get taskTitle => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 class UserSettingsEntries extends Table {
   TextColumn get id => text()();
   IntColumn get workDurationMinutes =>
@@ -91,6 +101,7 @@ class TimerPresetEntries extends Table {
     TaskEntries,
     SubtaskEntries,
     FocusSessionEntries,
+    DistractionNoteEntries,
     UserSettingsEntries,
     TimerPresetEntries,
   ],
@@ -99,7 +110,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -161,6 +172,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 10) {
         await m.addColumn(taskEntries, taskEntries.scheduledStart);
+      }
+      if (from < 11) {
+        await m.createTable(distractionNoteEntries);
       }
     },
   );
